@@ -193,8 +193,8 @@ fps = {
     vop_dur = 0,
     frames = 0,
     tick = function(self)
-        local vop = get('vo-passes/fresh') or {}
-        for _, v in ipairs(vop) do
+        local vop = get('vo-passes') or {fresh = {}}
+        for _, v in ipairs(vop.fresh) do
             self.vop_dur = self.vop_dur + v.last
         end
         if self.vop_dur ~= self.prev_vop_dur then self.frames = self.frames + 1 end
