@@ -1,4 +1,4 @@
-﻿-- control v1.0
+﻿-- control v1.0.1
 -- https://github.com/oe-d/control
 -- see control.conf for settings and key binds
 
@@ -15,7 +15,7 @@ o = {
     step_mute = 'auto',
     htp_speed = 2.5,
     htp_keep_dir = 'no',
-    eof_exit_fs = 'no',
+    end_exit_fs = 'no',
     audio_symbol='🔊 ',
     audio_muted_symbol='🔈 ',
     image_symbol='🖼 ',
@@ -67,7 +67,7 @@ function init()
         end
     end)
     mp.observe_property('eof-reached', 'bool', function(_, v)
-        if v and o.eof_exit_fs == 'yes' and get('fs') and not step.played then mp.command('cycle fullscreen') end
+        if v and o.end_exit_fs == 'yes' and get('fs') and not step.played then mp.command('cycle fullscreen') end
     end)
 end
 
@@ -125,6 +125,9 @@ audio = {
     osd = true,
     prev_list = '',
     i = 0,
+    set_prev_vol = false,
+    prev_mute = false,
+    prev_vol = 0,
     valid = true,
     get = function(self, index)
         local list = get('audio-device-list')
@@ -156,17 +159,37 @@ audio = {
         if u.to_string(list) ~= self.prev_list then self.i = 0 end
         self.prev_list = u.to_string(list)
         self.i = self.i == table.getn(list) and 1 or self.i + 1
+        local remember_vol = false
+        local index = 0
+        local set_vol = false
+        local vol = 0
         for i, v in ipairs(list) do
-            self.valid = true
             local iv = split(v, '%d+')
-            if i == self.i then
-                self:set(tonumber(iv[1]))
+            if i == (self.i > 1 and self.i - 1 or table.getn(list)) and string.find(v, 'r') then
+                self.set_prev_vol = true
+                remember_vol = true
+            elseif i == self.i then
+                index = tonumber(iv[1])
                 if iv[2] then
-                    mp.command('no-osd set mute no')
-                    mp.command('no-osd set volume '..iv[2])
+                    set_vol = true
+                    vol = iv[2]
                 end
             end
             list[i] = self:get(tonumber(iv[1]))
+        end
+        if remember_vol then
+            self.prev_mute = get('mute')
+            self.prev_vol = get('volume')
+        end
+        self.valid = true
+        self:set(index)
+        if set_vol then
+            mp.command('no-osd set mute no')
+            mp.command('no-osd set volume '..vol)
+        elseif self.set_prev_vol then
+            mp.command('no-osd set mute '..(self.prev_mute and 'yes' or 'no'))
+            mp.command('no-osd set volume '..self.prev_vol)
+            self.set_prev_vol = false
         end
         self:list(list, false, 2)
     end,
