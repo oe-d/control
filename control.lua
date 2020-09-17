@@ -262,22 +262,27 @@ osd = {
     msg = '',
     show = false,
     toggled = false,
-    msg_timer = mp.add_timeout(1e8, function() osd.msg = osd.default_msg() end),
     osd_timer = mp.add_timeout(1e8, function() mp.set_property('osd-msg1', '') end),
+    msg_timer = mp.add_timeout(1e8, function() osd.msg = osd.default_msg() end),
     set = function(self, msg, duration)
+        if msg or not self.toggled or (self.toggled and self.osd_timer.timeout ~= 1e8) then
+            self.osd_timer:kill()
+            self.osd_timer.timeout = self.toggled and 1e8 or duration
+            self.osd_timer:resume()
+            mp.set_property('osd-level', 1)
+        end
         if msg then
             self.msg = msg
             self.msg_timer:kill()
             self.msg_timer.timeout = duration
             self.msg_timer:resume()
+            mp.add_timeout(0.1, function() mp.set_property('osd-msg1', self.msg) end)
         elseif not self.msg_timer:is_enabled() then
             self.msg = self.default_msg()
+            mp.set_property('osd-msg1', self.msg)
+        else
+            mp.set_property('osd-msg1', self.msg)
         end
-        self.osd_timer:kill()
-        self.osd_timer.timeout = self.toggled and 1e8 or duration
-        self.osd_timer:resume()
-        mp.set_property('osd-level', 1)
-        mp.set_property('osd-msg1', self.msg)
     end,
     toggle = function(self)
         self.toggled = not self.toggled
