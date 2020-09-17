@@ -1,4 +1,4 @@
-## v1.0.1 - 2020-09-17 - [`beb6d76`](https://github.com/oe-d/control/tree/beb6d764f346c4e4b2d16b02bf2e0a0b056f2a95)
+## v1.0.1 - 2020-09-17 - [`98c0fb6`](https://github.com/oe-d/control/tree/98c0fb6bfce3619155063768237529b6ec0396a3)
 
 - Add exit fullscreen on end of playback setting.
 
