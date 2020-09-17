@@ -2,7 +2,8 @@
 
 Features:
 - Improved cycle fullscreen when using mouse.
-- Cycle pause and replay video at the end of playback.
+- Cycle pause with replay video at the end of playback.
+- Exit fullscreen at the end of playback.
 - List and set/cycle audio devices with volume options.
 - Display playback info.
 - Customizable frame step.
