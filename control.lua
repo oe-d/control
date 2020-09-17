@@ -15,6 +15,7 @@ o = {
     step_mute = 'auto',
     htp_speed = 2.5,
     htp_keep_dir = 'no',
+    eof_exit_fs = 'no',
     audio_symbol='🔊 ',
     audio_muted_symbol='🔈 ',
     image_symbol='🖼 ',
@@ -64,6 +65,9 @@ function init()
             step.dir_frame = get('frame')
             step.hwdec_timer:resume()
         end
+    end)
+    mp.observe_property('eof-reached', 'bool', function(_, v)
+        if v and o.eof_exit_fs == 'yes' and get('fs') and not step.played then mp.command('cycle fullscreen') end
     end)
 end
 
@@ -346,7 +350,6 @@ step = {
         self.muted = get('mute')
         self.prev_speed = get('speed')
         self.prev_pos = get('pos')
-        self.played = false
         if o.show_info == 'yes' then osd.show = true end
         if htp then
             self.play_speed = o.htp_speed
@@ -375,6 +378,7 @@ step = {
         mp.command('set pause yes')
         if self.played then mp.commandv('seek', 0, 'relative+exact') end
         if htp and not self.paused then mp.command('set pause no') end
+        self.played = false
         if not osd.toggled then osd.show = false end
     end,
     on_press = function(self, dir, htp)
