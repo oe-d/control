@@ -8,7 +8,7 @@ Features:
 - Customizable frame step.
 - Hold to play with speed setting.
 
-See `control.conf` for settings and example key binds.
+See [`control.conf`](https://github.com/oe-d/control/blob/master/control.conf) for settings and example key binds.
 
 # Key binds
 
@@ -24,7 +24,7 @@ Shows an indexed list of audio devices.
 #### `cycle-audio-devices`
 Cycle a list of audio devices separated by space.
 
-Usage: no-osd (optional) iv#r where i = index, v# = volume (optional), r = remember volume (optional).
+Usage: `no-osd` (optional) `iv#r` where `i` = index, `v#` = volume (optional), `r` = remember volume (optional).
 
 `r` will remember current volume and change back to it when cycling to a device without the `v` option.
 
