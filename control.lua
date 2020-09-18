@@ -1,4 +1,4 @@
-﻿-- control v1.0.1
+﻿-- control v1.0.2
 -- https://github.com/oe-d/control
 -- see control.conf for settings and key binds
 
@@ -301,27 +301,22 @@ function cycle_pause()
 end
 
 fullscreen = {
+    prev_time = 0,
     clicks = 0,
     x = 0,
-    click_timer = mp.add_timeout(0.4, function() fullscreen.clicks = 0 end),
     click = function(self)
-        if self.clicks == 0 then
-            self.x = mp.get_mouse_pos()
-            self.clicks = 1
-            self.click_timer:resume()
-        elseif math.abs(mp.get_mouse_pos() - self.x) < 5 then
+        if mp.get_time() - self.prev_time > 0.3 then self.clicks = 0 end
+        if self.clicks == 1 and mp.get_time() - self.prev_time < 0.3 and math.abs(mp.get_mouse_pos() - self.x) < 5 then
             self.clicks = 2
         else
-            self.click_timer:kill()
-            self.click_timer:resume()
             self.x = mp.get_mouse_pos()
             self.clicks = 1
         end
+        self.prev_time = mp.get_time()
     end,
     cycle = function(self, e)
-        if self.clicks == 2 then
+        if self.clicks == 2 and mp.get_time() - self.prev_time < 0.3 then
             if (e == 'down' and get('fs')) or (e == 'up' and not get('fs')) then
-                self.click_timer:kill()
                 mp.command('cycle fullscreen')
                 self.clicks = 0
             end
