@@ -32,7 +32,7 @@ Usage: `no-osd` (optional) `iv#r` where `i` = index, `v#` = volume (optional), `
 Example: `Tab script-message-to control cycle-audio-devices no-osd 1v50 3r 2v100`
 
 #### `set-audio-device`
-Same usage as `cycle-audio-devices`
+Same usage as `cycle-audio-devices` except `r` which is ignored.
 
 #### `toggle-info`
 Toggle playback info. Shows frame count, progress, fps and speed.
