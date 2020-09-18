@@ -1,12 +1,12 @@
-﻿-- control v1.0.3
+﻿-- Control 1.0.3
 -- https://github.com/oe-d/control
--- see control.conf for settings and key binds
+-- See control.conf for settings and key binds
 
 options = require 'mp.options'
 u = require 'mp.utils'
 
 o = {
-    audio_device = 1,
+    audio_device = 0,
     show_info = 'yes',
     info_duration = 1000,
     step_method = 'seek',
@@ -52,7 +52,7 @@ function init()
     step.delay_timer:kill()
     step.delay_timer.timeout = o.step_delay / 1000
     step.hwdec_timer:kill()
-    audio:set(o.audio_device)
+    if o.audio_device > 0 then audio:set(o.audio_device) end
     mp.register_event('file-loaded', function() media:get_type() end)
     mp.observe_property('playback-time', 'number', function(_, _)
         if osd.show then
