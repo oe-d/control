@@ -168,7 +168,8 @@ audio = {
             if i == (self.i > 1 and self.i - 1 or table.getn(list)) and string.find(v, 'r') then
                 self.set_prev_vol = true
                 remember_vol = true
-            elseif i == self.i then
+            end
+            if i == self.i then
                 index = tonumber(iv[1])
                 if iv[2] then
                     set_vol = true
