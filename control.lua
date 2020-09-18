@@ -7,6 +7,8 @@ u = require 'mp.utils'
 
 o = {
     audio_device = 0,
+    pause_minimized = 'no',
+    play_restored = 'no',
     show_info = 'yes',
     info_duration = 1000,
     step_method = 'seek',
@@ -54,6 +56,13 @@ function init()
     step.hwdec_timer:kill()
     if o.audio_device > 0 then audio:set(o.audio_device) end
     mp.register_event('file-loaded', function() media:get_type() end)
+    mp.observe_property('window-minimized', 'bool', function(_, v)
+        if v then
+            if o.pause_minimized == 'yes' then media.playback:on_minimize() end
+        else
+            if o.play_restored == 'yes' then media.playback:on_restore() end
+        end
+    end)
     mp.observe_property('playback-time', 'number', function(_, _)
         if osd.show then
             fps:tick()
@@ -118,7 +127,30 @@ media = {
             self.type = 'video'
         end
         return self.type
-    end
+    end,
+    playback = {
+        prev_pause = false,
+        pause = function()
+            if get('eof-reached') then
+                mp.commandv('seek', 0, 'absolute')
+                mp.command('set pause no')
+            else
+                if get('pause') and step.stepped then
+                    mp.commandv('seek', 0, 'relative+exact')
+                    step.stepped = false
+                end
+                mp.command('set pause '..(get('pause') and 'no' or 'yes'))
+            end
+        end,
+        on_minimize = function(self)
+            self.prev_pause = get('pause')
+            mp.command('set pause yes')
+        end,
+        on_restore = function(self)
+            if not self.prev_pause then mp.command('set pause no') end
+            self.prev_pause = false
+        end
+    }
 }
 
 audio = {
@@ -292,19 +324,6 @@ osd = {
     end
 }
 
-function cycle_pause()
-    if get('eof-reached') then
-        mp.commandv('seek', 0, 'absolute')
-        mp.command('set pause no')
-    else
-        if get('pause') and step.stepped then
-            mp.commandv('seek', 0, 'relative+exact')
-            step.stepped = false
-        end
-        mp.command('set pause '..(get('pause') and 'no' or 'yes'))
-    end
-end
-
 fullscreen = {
     prev_time = 0,
     clicks = 0,
@@ -443,7 +462,7 @@ mp.register_script_message('list-audio-devices', function() audio:msg_handler('l
 mp.register_script_message('set-audio-device', function(...) audio:msg_handler('cycle', ...) end)
 mp.register_script_message('cycle-audio-devices', function(...) audio:msg_handler('cycle', ...) end)
 mp.add_key_binding(nil, 'toggle-info', function() osd:toggle() end)
-mp.add_key_binding(nil, 'cycle-pause', cycle_pause)
+mp.add_key_binding(nil, 'cycle-pause', media.playback.pause)
 mp.add_key_binding(nil, 'cycle-fullscreen', function(e) fullscreen:key_handler(e) end, {complex = true})
 mp.add_key_binding(nil, 'step', function(e) step:key_handler(e, 'forward') end, {complex = true})
 mp.add_key_binding(nil, 'step-back', function(e) step:key_handler(e, 'backward') end, {complex = true})
