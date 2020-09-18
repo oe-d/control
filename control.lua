@@ -1,4 +1,4 @@
-﻿-- control v1.0.2
+﻿-- control v1.0.3
 -- https://github.com/oe-d/control
 -- see control.conf for settings and key binds
 
@@ -297,6 +297,10 @@ function cycle_pause()
         mp.commandv('seek', 0, 'absolute')
         mp.command('set pause no')
     else
+        if get('pause') and step.stepped then
+            mp.commandv('seek', 0, 'relative+exact')
+            step.stepped = false
+        end
         mp.command('set pause '..(get('pause') and 'no' or 'yes'))
     end
 end
@@ -349,6 +353,7 @@ step = {
     prev_speed = 1,
     prev_pos = 0,
     play_speed = 1,
+    stepped = false,
     played = false,
     delay_timer = mp.add_timeout(1e8, function() step:play() end),
     hwdec_timer = mp.add_periodic_timer(1 / 60, function()
@@ -365,6 +370,7 @@ step = {
         mp.command('no-osd set speed '..self.play_speed)
         if o.step_mute == 'auto' and not self.muted then mp.command('no-osd set mute no')
         elseif o.step_mute == 'hold' then mp.command('no-osd set mute yes') end
+        mp.commandv('seek', 0, 'relative+exact')
         mp.command('set pause no')
     end,
     start = function(self, dir, htp)
@@ -385,6 +391,7 @@ step = {
             if dir == 'forward' and o.step_method == 'step' then
                 if o.step_mute ~= 'none' then mp.command('no-osd set mute yes') end
                 mp.command('frame-step')
+                self.stepped = true
             elseif dir == 'backward' or get('time-pos') < get('duration') then
                 mp.commandv('seek', (dir == 'forward' and 1 or -1) / get('fps'), 'relative+exact')
             end
