@@ -57,11 +57,8 @@ function init()
     if o.audio_device > 0 then audio:set(o.audio_device) end
     mp.register_event('file-loaded', function() media:get_type() end)
     mp.observe_property('window-minimized', 'bool', function(_, v)
-        if v then
-            if o.pause_minimized == 'yes' then media.playback:on_minimize() end
-        else
-            if o.play_restored == 'yes' then media.playback:on_restore() end
-        end
+        if v and o.pause_minimized == 'yes' then media.playback:on_minimize()
+        elseif not v and o.play_restored == 'yes' then media.playback:on_restore() end
     end)
     mp.observe_property('playback-time', 'number', function(_, _)
         if osd.show then
@@ -76,7 +73,8 @@ function init()
         end
     end)
     mp.observe_property('eof-reached', 'bool', function(_, v)
-        if v and o.end_exit_fs == 'yes' and get('fs') and not step.played then mp.command('cycle fullscreen') end
+        media.playback.eof = v
+        if v and o.end_exit_fs == 'yes' and not step.played then mp.command('set fullscreen no') end
     end)
 end
 
@@ -129,9 +127,10 @@ media = {
         return self.type
     end,
     playback = {
+        eof = false,
         prev_pause = false,
-        pause = function()
-            if get('eof-reached') then
+        pause = function(self)
+            if self.eof then
                 mp.commandv('seek', 0, 'absolute')
                 mp.command('set pause no')
             else
@@ -427,7 +426,7 @@ step = {
         if not self.muted then mp.command('no-osd set mute no') end
         mp.command('set pause yes')
         if self.played then mp.commandv('seek', 0, 'relative+exact') end
-        if htp and not self.paused then mp.command('set pause no') end
+        if htp and not self.paused and not (media.playback.eof and get('keep-open-pause')) then mp.command('set pause no') end
         self.played = false
         if not osd.toggled then osd.show = false end
     end,
@@ -462,7 +461,7 @@ mp.register_script_message('list-audio-devices', function() audio:msg_handler('l
 mp.register_script_message('set-audio-device', function(...) audio:msg_handler('cycle', ...) end)
 mp.register_script_message('cycle-audio-devices', function(...) audio:msg_handler('cycle', ...) end)
 mp.add_key_binding(nil, 'toggle-info', function() osd:toggle() end)
-mp.add_key_binding(nil, 'cycle-pause', media.playback.pause)
+mp.add_key_binding(nil, 'cycle-pause', function() media.playback:pause() end)
 mp.add_key_binding(nil, 'cycle-fullscreen', function(e) fullscreen:key_handler(e) end, {complex = true})
 mp.add_key_binding(nil, 'step', function(e) step:key_handler(e, 'forward') end, {complex = true})
 mp.add_key_binding(nil, 'step-back', function(e) step:key_handler(e, 'backward') end, {complex = true})
