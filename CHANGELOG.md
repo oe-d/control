@@ -1,3 +1,9 @@
+https://github.com/oe-d/control/tree/aa5e4c330bc6a531ed1d4c862d4947870e3a1f07
+
+## v1.0.3 - 2020-09-18 - [`aa5e4c3`](https://github.com/oe-d/control/tree/aa5e4c330bc6a531ed1d4c862d4947870e3a1f07)
+
+- More fixes.
+
 ## v1.0.2 - 2020-09-18 - [`4b0f7fe`](https://github.com/oe-d/control/tree/4b0f7fe5c83efdd9f71c29405a87390b34ec6bd7)
 
 - Minor fixes.
