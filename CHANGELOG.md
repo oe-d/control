@@ -1,5 +1,3 @@
-https://github.com/oe-d/control/tree/aa5e4c330bc6a531ed1d4c862d4947870e3a1f07
-
 ## v1.0.3 - 2020-09-18 - [`aa5e4c3`](https://github.com/oe-d/control/tree/aa5e4c330bc6a531ed1d4c862d4947870e3a1f07)
 
 - More fixes.
