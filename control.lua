@@ -11,6 +11,7 @@ o = {
     play_restored = 'no',
     show_info = 'yes',
     info_duration = 1000,
+    show_volume = 'yes',
     step_method = 'seek',
     step_delay = -1,
     step_rate = 0,
@@ -192,11 +193,13 @@ audio = {
         local msg = ''
         for i, v in ipairs(list) do
             local symbol = ''
+            local vol = ''
             if v.name == get('audio-device') then
                 symbol = (get('mute') or get('volume') == 0) and o.audio_muted_symbol or o.audio_symbol
+                if o.show_volume == 'yes' then vol = '('..get('volume')..') ' end
             end
             i = show_index and i..': ' or ''
-            msg = msg..i..symbol..string.gsub(v.description, 'Autoselect', 'Default')..'\n'
+            msg = msg..i..symbol..vol..string.gsub(v.description, 'Autoselect', 'Default')..'\n'
         end
         if self.osd then osd:set(msg, duration) end
     end,
