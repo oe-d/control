@@ -67,7 +67,7 @@ function init()
     end)
     mp.observe_property('playback-time', 'number', function(_, _)
         if osd.show then
-            fps:tick()
+            fps:on_tick()
             osd:set(nil, o.info_duration / 1000)
         end
     end)
@@ -268,7 +268,7 @@ fps = {
     prev_vop_dur = 0,
     vop_dur = 0,
     frames = 0,
-    tick = function(self)
+    on_tick = function(self)
         local vop = get('vo-passes') or {fresh = {}}
         for _, v in ipairs(vop.fresh) do
             self.vop_dur = self.vop_dur + v.last
@@ -344,7 +344,15 @@ fullscreen = {
     prev_time = 0,
     clicks = 0,
     x = 0,
-    click = function(self)
+    cycle = function(self, e)
+        if self.clicks == 2 and mp.get_time() - self.prev_time < 0.3 then
+            if (e == 'down' and get('fs')) or (e == 'up' and not get('fs')) then
+                mp.command('cycle fullscreen')
+                self.clicks = 0
+            end
+        end
+    end,
+    on_click = function(self)
         if mp.get_time() - self.prev_time > 0.3 then self.clicks = 0 end
         if self.clicks == 1 and mp.get_time() - self.prev_time < 0.3 and math.abs(mp.get_mouse_pos() - self.x) < 5 then
             self.clicks = 2
@@ -354,14 +362,6 @@ fullscreen = {
         end
         self.prev_time = mp.get_time()
     end,
-    cycle = function(self, e)
-        if self.clicks == 2 and mp.get_time() - self.prev_time < 0.3 then
-            if (e == 'down' and get('fs')) or (e == 'up' and not get('fs')) then
-                mp.command('cycle fullscreen')
-                self.clicks = 0
-            end
-        end
-    end,
     key_handler = function(self, e)
         if e.key_name == 'MBTN_LEFT_DBL' then
             osd:set('Bind to MBTN_LEFT. Not MBTN_LEFT_DBL.', 4)
@@ -370,7 +370,7 @@ fullscreen = {
                 ..'Key down/up events are required.\n'
                 ..'Make sure nothing else is bound to the key.', 4)
         elseif e.event == 'down' then
-            self:click()
+            self:on_click()
             self:cycle(e.event)
         elseif e.event == 'up' then
             self:cycle(e.event)
