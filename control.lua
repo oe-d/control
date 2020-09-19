@@ -1,4 +1,4 @@
-﻿-- Control 1.0.4
+﻿-- Control 1.0.5
 -- https://github.com/oe-d/control
 -- See control.conf for settings and key binds
 
@@ -59,8 +59,10 @@ function init()
     if o.audio_device > 0 then audio:set(o.audio_device) end
     mp.register_event('file-loaded', function() media:get_type() end)
     mp.observe_property('window-minimized', 'bool', function(_, v)
-        if v and o.pause_minimized == 'yes' then media.playback:on_minimize()
-        elseif not v and o.play_restored == 'yes' then media.playback:on_restore() end
+        if o.pause_minimized == 'yes' or o.pause_minimized == media:get_type() then
+            if v then media.playback:on_minimize()
+            elseif o.play_restored == 'yes' then media.playback:on_restore() end
+        end
     end)
     mp.observe_property('playback-time', 'number', function(_, _)
         if osd.show then
