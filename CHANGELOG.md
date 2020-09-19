@@ -1,3 +1,9 @@
+## 1.0.5 - 2020-09-19 - [`c95cc1e`](https://github.com/oe-d/control/tree/c95cc1ebf254568f91c5575141c91b24e86278be)
+
+- Add pause when minimized options.
+
+- Change step mute option `none` to `no`.
+
 ## 1.0.4 - 2020-09-19 - [`4c17886`](https://github.com/oe-d/control/tree/4c17886211b30d4a8817d72984d17e6f40d5742f)
 
 - Add pause on minimize setting.
