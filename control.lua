@@ -419,7 +419,7 @@ step = {
             self.delay_timer:resume()
             mp.command('set pause yes')
             if dir == 'forward' and o.step_method == 'step' then
-                if o.step_mute ~= 'none' then mp.command('no-osd set mute yes') end
+                if o.step_mute ~= 'no' then mp.command('no-osd set mute yes') end
                 mp.command('frame-step')
                 self.stepped = true
             elseif dir == 'backward' or get('time-pos') < get('duration') then
