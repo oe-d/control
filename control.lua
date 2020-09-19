@@ -1,4 +1,4 @@
-﻿-- Control 1.0.3
+﻿-- Control 1.0.4
 -- https://github.com/oe-d/control
 -- See control.conf for settings and key binds
 
@@ -17,6 +17,7 @@ o = {
     step_mute = 'auto',
     htp_speed = 2.5,
     htp_keep_dir = 'no',
+    end_rewind = 'no',
     end_exit_fs = 'no',
     audio_symbol='🔊 ',
     audio_muted_symbol='🔈 ',
@@ -29,6 +30,7 @@ function init()
     options.read_options(o, 'control')
     if o.step_delay == -1 then o.step_delay = get('input-ar-delay') end
     if o.step_rate == -1 then o.step_rate = get('input-ar-rate') end
+    if o.end_rewind == 'file' then mp.set_property('keep-open', 'always') end
     if o.show_info == 'start' then
         o.show_info = 'yes'
         osd:toggle()
@@ -74,7 +76,14 @@ function init()
     end)
     mp.observe_property('eof-reached', 'bool', function(_, v)
         media.playback.eof = v
-        if v and o.end_exit_fs == 'yes' and not step.played then mp.command('set fullscreen no') end
+        if v and not step.played then
+            if o.end_rewind ~= 'no' then
+                local pos = tonumber(o.end_rewind)
+                if pos then mp.set_property('playlist-pos-1', math.min(pos, get('playlist-count'))) end
+                mp.add_timeout(0.01, function() media.playback.rewind(true) end)
+            end
+            if o.end_exit_fs == 'yes' then mp.command('set fullscreen no') end
+        end
     end)
 end
 
@@ -131,8 +140,7 @@ media = {
         prev_pause = false,
         pause = function(self)
             if self.eof then
-                mp.commandv('seek', 0, 'absolute')
-                mp.command('set pause no')
+                self.rewind()
             else
                 if get('pause') and step.stepped then
                     mp.commandv('seek', 0, 'relative+exact')
@@ -140,6 +148,10 @@ media = {
                 end
                 mp.command('set pause '..(get('pause') and 'no' or 'yes'))
             end
+        end,
+        rewind = function(pause)
+            mp.commandv('seek', 0, 'absolute')
+            mp.command('set pause '..(pause and 'yes' or 'no'))
         end,
         on_minimize = function(self)
             self.prev_pause = get('pause')
