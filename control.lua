@@ -422,7 +422,7 @@ step = {
         else
             self.play_speed = o.step_rate == 0 and 1 or o.step_rate / get('fps')
             self.delay_timer:resume()
-            mp.command('set pause yes')
+            if not self.paused then mp.command('set pause yes') end
             if dir == 'forward' and o.step_method == 'step' then
                 if o.step_mute ~= 'no' then mp.command('no-osd set mute yes') end
                 mp.command('frame-step')
@@ -441,9 +441,8 @@ step = {
         if not htp or o.htp_keep_dir == 'no' then mp.command('no-osd set play-dir forward') end
         mp.command('no-osd set speed '..self.prev_speed)
         if not self.muted then mp.command('no-osd set mute no') end
-        mp.command('set pause yes')
+        if (htp and self.paused) or (not htp and self.played) then mp.command('set pause yes') end
         if self.played then mp.commandv('seek', 0, 'relative+exact') end
-        if htp and not self.paused and not (media.playback.eof and get('keep-open-pause')) then mp.command('set pause no') end
         self.played = false
         if not osd.toggled then osd.show = false end
     end,
