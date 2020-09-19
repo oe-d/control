@@ -1,17 +1,27 @@
-## v1.0.3 - 2020-09-18 - [`aa5e4c3`](https://github.com/oe-d/control/tree/aa5e4c330bc6a531ed1d4c862d4947870e3a1f07)
+## 1.0.4 - 2020-09-19 - [`4c17886`](https://github.com/oe-d/control/tree/4c17886211b30d4a8817d72984d17e6f40d5742f)
+
+- Add pause on minimize setting.
+
+- Add rewind on end of playback setting.
+
+- Don't set audio device by default.
+
+- Don't exit fullscreen on end of playback when using htp and --keep-open-pause
+
+## 1.0.3 - 2020-09-18 - [`aa5e4c3`](https://github.com/oe-d/control/tree/aa5e4c330bc6a531ed1d4c862d4947870e3a1f07)
 
 - More fixes.
 
-## v1.0.2 - 2020-09-18 - [`4b0f7fe`](https://github.com/oe-d/control/tree/4b0f7fe5c83efdd9f71c29405a87390b34ec6bd7)
+## 1.0.2 - 2020-09-18 - [`4b0f7fe`](https://github.com/oe-d/control/tree/4b0f7fe5c83efdd9f71c29405a87390b34ec6bd7)
 
 - Minor fixes.
 
-## v1.0.1 - 2020-09-17 - [`98c0fb6`](https://github.com/oe-d/control/tree/98c0fb6bfce3619155063768237529b6ec0396a3)
+## 1.0.1 - 2020-09-17 - [`98c0fb6`](https://github.com/oe-d/control/tree/98c0fb6bfce3619155063768237529b6ec0396a3)
 
 - Add exit fullscreen on end of playback setting.
 
 - Add remember audio device volume option.
 
-## v1.0 - 2020-09-17 - [`1517ebb`](https://github.com/oe-d/control/tree/1517ebbc88354a7d8a8d4e2e66cbc28de1e82085)
+## 1.0.0 - 2020-09-17 - [`1517ebb`](https://github.com/oe-d/control/tree/1517ebbc88354a7d8a8d4e2e66cbc28de1e82085)
 
 Public release.
