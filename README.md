@@ -11,9 +11,30 @@ Features:
 - Customizable frame step.
 - Hold to play with speed setting.
 
-See [`control.conf`](https://github.com/oe-d/control/blob/master/control.conf) for settings and example key binds.
+[`Changelog`](CHANGELOG.md)
+
+# Installation
+
+[`control.lua`](https://raw.githubusercontent.com/oe-d/control/master/control.lua) goes in the `scripts` folder.
+[`control.conf`](https://raw.githubusercontent.com/oe-d/control/master/control.conf) goes in the `script-opts` folder.
+
+Edit settings in `control.conf`.
+
+Linux, macOS
+
+`~/.config/mpv/scripts/`
+
+`~/.config/mpv/script-opts/`
+
+Windows
+
+`%APPDATA%\mpv\scripts`
+
+`%APPDATA%\mpv\script-opts`
 
 # Key binds
+
+See [`control.conf`](https://github.com/oe-d/control/blob/master/control.conf) for example key binds.
 
 #### `cycle-fullscreen`
 Cycle fullscreen and prevent draggable fullscreen window.
