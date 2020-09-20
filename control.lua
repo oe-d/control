@@ -8,18 +8,18 @@ u = require 'mp.utils'
 o = {
     audio_device = 0,
     pause_minimized = 'no',
-    play_restored = 'no',
+    play_restored = false,
     show_info = 'yes',
     info_duration = 1000,
-    show_volume = 'yes',
+    show_volume = true,
     step_method = 'seek',
     step_delay = -1,
     step_rate = 0,
     step_mute = 'auto',
     htp_speed = 2.5,
-    htp_keep_dir = 'no',
+    htp_keep_dir = false,
     end_rewind = 'no',
-    end_exit_fs = 'no',
+    end_exit_fs = false,
     audio_symbol='🔊 ',
     audio_muted_symbol='🔈 ',
     image_symbol='🖼 ',
@@ -62,7 +62,7 @@ function init()
     mp.observe_property('window-minimized', 'bool', function(_, v)
         if o.pause_minimized == 'yes' or o.pause_minimized == media:get_type() then
             if v then media.playback:on_minimize()
-            elseif o.play_restored == 'yes' then media.playback:on_restore() end
+            elseif o.play_restored then media.playback:on_restore() end
         end
     end)
     mp.observe_property('playback-time', 'number', function(_, _)
@@ -85,7 +85,7 @@ function init()
                 if pos then mp.set_property('playlist-pos-1', math.min(pos, get('playlist-count'))) end
                 mp.add_timeout(0.01, function() media.playback.rewind(true) end)
             end
-            if o.end_exit_fs == 'yes' then mp.command('set fullscreen no') end
+            if o.end_exit_fs then mp.command('set fullscreen no') end
         end
     end)
 end
@@ -196,7 +196,7 @@ audio = {
             local vol = ''
             if v.name == get('audio-device') then
                 symbol = (get('mute') or get('volume') == 0) and o.audio_muted_symbol or o.audio_symbol
-                if o.show_volume == 'yes' then vol = '('..get('volume')..') ' end
+                if o.show_volume then vol = '('..get('volume')..') ' end
             end
             i = show_index and i..': ' or ''
             msg = msg..i..symbol..vol..string.gsub(v.description, 'Autoselect', 'Default')..'\n'
@@ -438,7 +438,7 @@ step = {
             mp.command('frame-back-step')
             print('Backward seek failed. Reverted to backstep.')
         end
-        if not htp or o.htp_keep_dir == 'no' then mp.command('no-osd set play-dir forward') end
+        if not htp or not o.htp_keep_dir then mp.command('no-osd set play-dir forward') end
         mp.command('no-osd set speed '..self.prev_speed)
         if not self.muted then mp.command('no-osd set mute no') end
         if (htp and self.paused) or (not htp and self.played) then mp.command('set pause yes') end
