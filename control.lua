@@ -1,4 +1,4 @@
-﻿-- Control 1.0.5
+-- Control 1.0.5
 -- https://github.com/oe-d/control
 -- See control.conf for settings and key binds
 
