@@ -6,6 +6,7 @@ options = require 'mp.options'
 u = require 'mp.utils'
 
 o = {
+    audio_devices = '\'auto\'',
     audio_device = 0,
     pause_minimized = 'no',
     play_restored = false,
@@ -175,9 +176,24 @@ audio = {
     prev_mute = false,
     prev_vol = 0,
     valid = true,
+    get_list = function(self)
+        local names = split(o.audio_devices, '\'([^\']+)\'')
+        local user_list = {}
+        local list = self:get()
+        for i, v in ipairs(names) do
+            table.insert(user_list, {name = v})
+            for j, _ in ipairs(list) do
+                if v == list[j].name then
+                    user_list[i].description = list[j].description
+                    break
+                end
+            end
+        end
+        return user_list
+    end,
     get = function(self, index)
-        local list = get('audio-device-list')
-        if index and (index < 1 or index > table.getn(list)) then
+        local list = index and self:get_list() or get('audio-device-list')
+        if (index and (index < 1 or index > table.getn(list) or not list[index].description)) then
             self.valid = false
             list[1].name = 'Invalid device index ('..index..')'
             list[1].description = list[1].name
@@ -189,7 +205,7 @@ audio = {
         local name = self:get(index).name
         if self.valid then mp.command('no-osd set audio-device '..name) end
     end,
-    list = function(self, list, show_index, duration)
+    list = function(self, list, duration, do_print)
         local msg = ''
         for i, v in ipairs(list) do
             local symbol = ''
@@ -198,8 +214,8 @@ audio = {
                 symbol = (get('mute') or get('volume') == 0) and o.audio_muted_symbol or o.audio_symbol
                 if o.show_volume then vol = '('..get('volume')..') ' end
             end
-            i = show_index and i..': ' or ''
-            msg = msg..i..symbol..vol..string.gsub(v.description, 'Autoselect', 'Default')..'\n'
+            msg = msg..symbol..vol..v.description..'\n'
+            if do_print then print('\''..v.name..'\''..' ('..v.description..')') end
         end
         if self.osd then osd:set(msg, duration) end
     end,
@@ -232,20 +248,20 @@ audio = {
         end
         self.valid = true
         self:set(index)
-        if set_vol then
+        if self.valid and set_vol then
             mp.command('no-osd set mute no')
             mp.command('no-osd set volume '..vol)
-        elseif self.set_prev_vol then
+        elseif self.valid and self.set_prev_vol then
             mp.command('no-osd set mute '..(self.prev_mute and 'yes' or 'no'))
             mp.command('no-osd set volume '..self.prev_vol)
             self.set_prev_vol = false
         end
-        self:list(list, false, 2)
+        self:list(list, 2)
     end,
     msg_handler = function(self, cmd, ...)
         if cmd == 'list' then
             self.osd = true
-            self:list(self:get(), true, 4)
+            self:list(self:get(), 4, true)
         elseif cmd == 'cycle' then
             local args = {...}
             if args[1] == 'no-osd' then
