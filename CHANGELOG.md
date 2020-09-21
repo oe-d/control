@@ -1,3 +1,11 @@
+## 1.0.6 - 2020-09-21 - [`571a85a`](https://github.com/oe-d/control/tree/571a85a3d0fd2252f65073d2f5741e615a75aa68)
+
+- Add a custom indexing system of audio devices as they can change order on reboot.
+
+- Add option to show volume when listing / switching audio devices.
+
+- Linux / macOS fixes.
+
 ## 1.0.5 - 2020-09-19 - [`c95cc1e`](https://github.com/oe-d/control/tree/c95cc1ebf254568f91c5575141c91b24e86278be)
 
 - Add pause when minimized options.
