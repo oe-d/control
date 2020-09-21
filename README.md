@@ -52,8 +52,6 @@ Usage: `no-osd` (optional) `iv#r` where `i` = index, `v#` = volume (optional), `
 
 `r` will remember current volume and change back to it when cycling to a device without the `v` option.
 
-Example: `Tab script-message-to control cycle-audio-devices no-osd 1v50 3r 2v100`
-
 #### `set-audio-device`
 Same usage as `cycle-audio-devices` except `r` which is ignored.
 
