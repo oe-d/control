@@ -78,6 +78,7 @@ function init()
             step.hwdec_timer:resume()
         end
     end)
+    mp.observe_property('pause', 'bool', function(_, v) step:on_pause(v) end)
     mp.observe_property('eof-reached', 'bool', function(_, v)
         media.playback.eof = v
         if v and not step.played then
@@ -143,15 +144,8 @@ media = {
         eof = false,
         prev_pause = false,
         pause = function(self)
-            if self.eof then
-                self.rewind()
-            else
-                if get('pause') and step.stepped then
-                    mp.commandv('seek', 0, 'relative+exact')
-                    step.stepped = false
-                end
-                mp.command('set pause '..(get('pause') and 'no' or 'yes'))
-            end
+            if self.eof then self.rewind()
+            else mp.command('set pause '..(get('pause') and 'no' or 'yes')) end
         end,
         rewind = function(pause)
             mp.commandv('seek', 0, 'absolute')
@@ -424,6 +418,12 @@ step = {
         elseif o.step_mute == 'hold' then mp.command('no-osd set mute yes') end
         mp.commandv('seek', 0, 'relative+exact')
         mp.command('set pause no')
+    end,
+    on_pause = function(self, pause)
+        if not pause and self.stepped then
+            mp.commandv('seek', 0, 'relative+exact')
+            self.stepped = false
+        end
     end,
     start = function(self, dir, htp)
         self.direction = dir
