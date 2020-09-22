@@ -357,11 +357,12 @@ osd = {
 }
 
 fullscreen = {
+    time_window = 0.5,
     prev_time = 0,
     clicks = 0,
     x = 0,
     cycle = function(self, e)
-        if self.clicks == 2 and mp.get_time() - self.prev_time < 0.3 then
+        if self.clicks == 2 and mp.get_time() - self.prev_time < self.time_window then
             if (e == 'down' and get('fs')) or (e == 'up' and not get('fs')) then
                 mp.command('cycle fullscreen')
                 self.clicks = 0
@@ -369,8 +370,8 @@ fullscreen = {
         end
     end,
     on_click = function(self)
-        if mp.get_time() - self.prev_time > 0.3 then self.clicks = 0 end
-        if self.clicks == 1 and mp.get_time() - self.prev_time < 0.3 and math.abs(mp.get_mouse_pos() - self.x) < 5 then
+        if mp.get_time() - self.prev_time > self.time_window then self.clicks = 0 end
+        if self.clicks == 1 and mp.get_time() - self.prev_time < self.time_window and math.abs(mp.get_mouse_pos() - self.x) < 5 then
             self.clicks = 2
         else
             self.x = mp.get_mouse_pos()
