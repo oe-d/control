@@ -60,35 +60,18 @@ function init()
     step.hwdec_timer:kill()
     if o.audio_device > 0 then audio:set(o.audio_device) end
     mp.register_event('file-loaded', function() media:get_type() end)
-    mp.observe_property('window-minimized', 'bool', function(_, v)
-        if o.pause_minimized == 'yes' or o.pause_minimized == media:get_type() then
-            if v then media.playback:on_minimize()
-            elseif o.play_restored then media.playback:on_restore() end
-        end
-    end)
+    mp.observe_property('window-minimized', 'bool', function(_, v) media.playback:on_minimize(v) end)
+    mp.observe_property('pause', 'bool', function(_, v) step:on_pause(v) end)
     mp.observe_property('playback-time', 'number', function(_, _)
         if osd.show then
             fps:on_tick()
             osd:set(nil, o.info_duration / 1000)
         end
     end)
-    mp.observe_property('play-dir', 'string', function(_, v)
-        if v == 'forward' and step.prev_hwdec then
-            step.dir_frame = get('frame')
-            step.hwdec_timer:resume()
-        end
-    end)
-    mp.observe_property('pause', 'bool', function(_, v) step:on_pause(v) end)
+    mp.observe_property('play-dir', 'string', function(_, v) step:on_dir(v) end)
     mp.observe_property('eof-reached', 'bool', function(_, v)
-        media.playback.eof = v
-        if v and not step.played then
-            if o.end_rewind ~= 'no' then
-                local pos = tonumber(o.end_rewind)
-                if pos then mp.set_property('playlist-pos-1', math.min(pos, get('playlist-count'))) end
-                mp.add_timeout(0.01, function() media.playback.rewind(true) end)
-            end
-            if o.end_exit_fs then mp.command('set fullscreen no') end
-        end
+        media.playback:on_eof(v)
+        fullscreen.on_eof(v)
     end)
 end
 
@@ -143,21 +126,37 @@ media = {
     playback = {
         eof = false,
         prev_pause = false,
+        play = function(dir, speed)
+            mp.command('no-osd set play-dir '..dir)
+            mp.command('no-osd set speed '..speed)
+            mp.commandv('seek', 0, 'relative+exact')
+            mp.command('set pause no')
+        end,
         pause = function(self)
             if self.eof then self.rewind()
             else mp.command('set pause '..(get('pause') and 'no' or 'yes')) end
         end,
-        rewind = function(pause)
-            mp.commandv('seek', 0, 'absolute')
-            mp.command('set pause '..(pause and 'yes' or 'no'))
+        rewind = function(playlist_pos, pause)
+            if playlist_pos then mp.set_property('playlist-pos-1', math.min(playlist_pos, get('playlist-count'))) end
+            mp.add_timeout(0.01, function()
+                mp.commandv('seek', 0, 'absolute')
+                mp.command('set pause '..(pause and 'yes' or 'no'))
+            end)
         end,
-        on_minimize = function(self)
-            self.prev_pause = get('pause')
-            mp.command('set pause yes')
+        on_minimize = function(self, minimized)
+            if o.pause_minimized == 'yes' or o.pause_minimized == media:get_type() then
+                if minimized then
+                    self.prev_pause = get('pause')
+                    mp.command('set pause yes')
+                elseif o.play_restored then
+                    if not self.prev_pause then mp.command('set pause no') end
+                    self.prev_pause = false
+                end
+            end
         end,
-        on_restore = function(self)
-            if not self.prev_pause then mp.command('set pause no') end
-            self.prev_pause = false
+        on_eof = function(self, eof)
+            self.eof = eof
+            if o.end_rewind ~= 'no' and eof and not step.played then self.rewind(tonumber(o.end_rewind), true) end
         end
     }
 }
@@ -373,6 +372,9 @@ fullscreen = {
         end
         self.prev_time = mp.get_time()
     end,
+    on_eof = function(eof)
+        if o.end_exit_fs and eof and not step.played then mp.command('set fullscreen no') end
+    end,
     key_handler = function(self, e)
         if e.key_name == 'MBTN_LEFT_DBL' then
             osd:set('Bind to MBTN_LEFT. Not MBTN_LEFT_DBL.', 4)
@@ -409,21 +411,24 @@ step = {
             step.prev_hwdec = nil
         end
     end),
-    play = function(self)
-        self.played = true
-        if self.direction == 'backward' then mp.command('no-osd set hwdec no') end
-        mp.command('no-osd set play-dir '..self.direction)
-        mp.command('no-osd set speed '..self.play_speed)
-        if o.step_mute == 'auto' and not self.muted then mp.command('no-osd set mute no')
-        elseif o.step_mute == 'hold' then mp.command('no-osd set mute yes') end
-        mp.commandv('seek', 0, 'relative+exact')
-        mp.command('set pause no')
+    on_dir = function(self, dir)
+        if dir == 'forward' and self.prev_hwdec then
+            self.dir_frame = get('frame')
+            self.hwdec_timer:resume()
+        end
     end,
     on_pause = function(self, pause)
         if not pause and self.stepped then
             mp.commandv('seek', 0, 'relative+exact')
             self.stepped = false
         end
+    end,
+    play = function(self)
+        self.played = true
+        if o.step_mute == 'auto' and not self.muted then mp.command('no-osd set mute no')
+        elseif o.step_mute == 'hold' then mp.command('no-osd set mute yes') end
+        if self.direction == 'backward' then mp.command('no-osd set hwdec no') end
+        media.playback.play(self.direction, self.play_speed)
     end,
     start = function(self, dir, htp)
         self.direction = dir
