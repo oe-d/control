@@ -1,3 +1,11 @@
+## 1.0.7 - 2020-09-22 - [`493bb4f`](https://github.com/oe-d/control/tree/493bb4ffa2dd5584b3950523c1793d11ab552c3a)
+
+- Don't unmute after every frame step.
+
+- Prevent skipping after frame step without having to use cycle-pause.
+
+- Increase fullscreen double click time window.
+
 ## 1.0.6 - 2020-09-21 - [`571a85a`](https://github.com/oe-d/control/tree/571a85a3d0fd2252f65073d2f5741e615a75aa68)
 
 - Add a custom indexing system of audio devices as they can change order on reboot.
