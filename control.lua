@@ -419,6 +419,7 @@ step = {
     end,
     on_pause = function(self, pause)
         if not pause and self.stepped then
+            if (o.step_mute == 'auto' and not self.muted) or (o.step_mute == 'hold' and not self.muted and not self.played) then mp.command('no-osd set mute no') end
             mp.commandv('seek', 0, 'relative+exact')
             self.stepped = false
         end
@@ -434,7 +435,7 @@ step = {
         self.direction = dir
         self.prev_hwdec = self.prev_hwdec or get('hwdec')
         self.paused = get('pause')
-        self.muted = get('mute')
+        if not self.stepped then self.muted = get('mute') end
         self.prev_speed = get('speed')
         self.prev_pos = get('pos')
         if o.show_info == 'yes' then osd.show = true end
@@ -462,7 +463,7 @@ step = {
         end
         if not htp or not o.htp_keep_dir then mp.command('no-osd set play-dir forward') end
         mp.command('no-osd set speed '..self.prev_speed)
-        if not self.muted then mp.command('no-osd set mute no') end
+        if o.step_mute ~= 'no' and (not self.muted and not (o.step_mute ~= 'no' and self.stepped)) then mp.command('no-osd set mute no') end
         if (htp and self.paused) or (not htp and self.played) then mp.command('set pause yes') end
         if self.played then mp.commandv('seek', 0, 'relative+exact') end
         self.played = false
