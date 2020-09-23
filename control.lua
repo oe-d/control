@@ -43,7 +43,7 @@ function init()
             return o.image_symbol
         elseif media.type == 'audio' then
             return o.music_symbol
-        else
+        elseif media.type == 'video' then
             local frame = get('frame')
             local frames = get('frames')
             if not frame or not frames then return o.video_symbol
@@ -52,6 +52,8 @@ function init()
             return o.video_symbol..math.min(frame, frames)..' / '..frames..' ('..progress..'%)\n'
                 ..format(math.max(get('pos') or 0, 0))..'\n'
                 ..round(fps.fps, 3)..' fps ('..round(get('speed'), 2)..'x)'
+        else
+            return ''
         end
     end
     osd.msg_timer:kill()
@@ -118,13 +120,16 @@ end
 media = {
     type = nil,
     get_type = function(self)
-        if get('track-list/0/type') == 'video' and get('frames') == 0 then
-            self.type = 'image'
-        elseif get('track-list/0/type') == 'audio' or get('track-list/0/albumart') == 'yes' then
-            self.type = 'audio'
-        else
-            self.type = 'video'
+        local tracks = get('track-list/count')
+        for i = 0, tracks - 1 do
+            if get('track-list/'..i..'/type') == 'video' then
+                if get('track-list/'..i..'/albumart') then self.type = 'audio'
+                elseif get('frames') < 2 then self.type = 'image'
+                else self.type = 'video' end
+                return self.type
+            end
         end
+        if tracks > 0 then self.type = 'audio' end
         return self.type
     end,
     playback = {
