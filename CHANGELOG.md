@@ -1,3 +1,9 @@
+## 1.0.8 - 2020-09-23 - [`f7096d3`](https://github.com/oe-d/control/tree/f7096d39c52d7ddf2519962c528dc5771d2ab438)
+
+- Add OSC always visible when paused setting.
+
+- Fix media type detection.
+
 ## 1.0.7 - 2020-09-22 - [`493bb4f`](https://github.com/oe-d/control/tree/493bb4ffa2dd5584b3950523c1793d11ab552c3a)
 
 - Don't unmute after every frame step.
