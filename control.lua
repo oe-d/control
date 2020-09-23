@@ -8,6 +8,7 @@ u = require 'mp.utils'
 o = {
     audio_devices = '\'auto\'',
     audio_device = 0,
+    osc_paused = false,
     pause_minimized = 'no',
     play_restored = false,
     show_info = 'yes',
@@ -61,7 +62,10 @@ function init()
     if o.audio_device > 0 then audio:set(o.audio_device) end
     mp.register_event('file-loaded', function() media:get_type() end)
     mp.observe_property('window-minimized', 'bool', function(_, v) media.playback:on_minimize(v) end)
-    mp.observe_property('pause', 'bool', function(_, v) step:on_pause(v) end)
+    mp.observe_property('pause', 'bool', function(_, v)
+        osc:on_pause(v)
+        step:on_pause(v)
+    end)
     mp.observe_property('playback-time', 'number', function(_, _)
         if osd.show then
             fps:on_tick()
@@ -264,6 +268,21 @@ audio = {
                 self.osd = true
             end
             self:cycle(args)
+        end
+    end
+}
+
+osc = {
+    overlay = mp.create_osd_overlay('ass-events'),
+    on_pause = function(self, pause)
+        if o.osc_paused then
+            if pause then
+                mp.command('script-message osc-visibility always no-osd')
+                self.overlay:update()
+                mp.add_timeout(0.05, function() self.overlay:remove() end)
+            else
+                mp.command('script-message osc-visibility auto no-osd')
+            end
         end
     end
 }
