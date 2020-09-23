@@ -1,4 +1,4 @@
--- Control 1.0.7
+-- Control 1.0.8
 -- https://github.com/oe-d/control
 -- See control.conf for settings and key binds
 
@@ -283,8 +283,10 @@ osc = {
         if o.osc_paused then
             if pause then
                 mp.command('script-message osc-visibility always no-osd')
-                self.overlay:update()
-                mp.add_timeout(0.05, function() self.overlay:remove() end)
+                mp.add_timeout(0.05, function()
+		            self.overlay:update()
+		            self.overlay:remove()
+	            end)
             else
                 mp.command('script-message osc-visibility auto no-osd')
             end
