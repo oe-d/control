@@ -79,6 +79,16 @@ function init()
         media.playback:on_eof(v)
         fullscreen.on_eof(v)
     end)
+    mp.register_script_message('list-audio-devices', function() audio:msg_handler('list') end)
+    mp.register_script_message('set-audio-device', function(...) audio:msg_handler('cycle', ...) end)
+    mp.register_script_message('cycle-audio-devices', function(...) audio:msg_handler('cycle', ...) end)
+    mp.add_key_binding(nil, 'toggle-info', function() osd:toggle() end)
+    mp.add_key_binding(nil, 'cycle-pause', function() media.playback:pause() end)
+    mp.add_key_binding(nil, 'cycle-fullscreen', function(e) fullscreen:key_handler(e) end, {complex = true})
+    mp.add_key_binding(nil, 'step', function(e) step:key_handler(e, 'forward') end, {complex = true})
+    mp.add_key_binding(nil, 'step-back', function(e) step:key_handler(e, 'backward') end, {complex = true})
+    mp.add_key_binding(nil, 'htp', function(e) step:key_handler(e, 'forward', true) end, {complex = true})
+    mp.add_key_binding(nil, 'htp-back', function(e) step:key_handler(e, 'backward', true) end, {complex = true})
 end
 
 function split(string, pattern)
@@ -521,14 +531,3 @@ step = {
 }
 
 init()
-
-mp.register_script_message('list-audio-devices', function() audio:msg_handler('list') end)
-mp.register_script_message('set-audio-device', function(...) audio:msg_handler('cycle', ...) end)
-mp.register_script_message('cycle-audio-devices', function(...) audio:msg_handler('cycle', ...) end)
-mp.add_key_binding(nil, 'toggle-info', function() osd:toggle() end)
-mp.add_key_binding(nil, 'cycle-pause', function() media.playback:pause() end)
-mp.add_key_binding(nil, 'cycle-fullscreen', function(e) fullscreen:key_handler(e) end, {complex = true})
-mp.add_key_binding(nil, 'step', function(e) step:key_handler(e, 'forward') end, {complex = true})
-mp.add_key_binding(nil, 'step-back', function(e) step:key_handler(e, 'backward') end, {complex = true})
-mp.add_key_binding(nil, 'htp', function(e) step:key_handler(e, 'forward', true) end, {complex = true})
-mp.add_key_binding(nil, 'htp-back', function(e) step:key_handler(e, 'backward', true) end, {complex = true})
