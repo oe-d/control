@@ -1,3 +1,7 @@
+## 1.0.9 - 2020-09-29 - [`3b32a3e`](https://github.com/oe-d/control/tree/3b32a3e543709a5a45e8e9b33c54557dfc3db5be)
+
+- Fix pausing after using step.
+
 ## 1.0.8 - 2020-09-23 - [`f7096d3`](https://github.com/oe-d/control/tree/f7096d39c52d7ddf2519962c528dc5771d2ab438)
 
 - Add OSC always visible when paused setting.
