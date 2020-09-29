@@ -1,4 +1,4 @@
--- Control 1.0.8
+-- Control 1.0.9
 -- https://github.com/oe-d/control
 -- See control.conf for settings and key binds
 
@@ -500,7 +500,7 @@ step = {
         if not htp or not o.htp_keep_dir then mp.command('no-osd set play-dir forward') end
         mp.command('no-osd set speed '..self.prev_speed)
         if o.step_mute ~= 'no' and (not self.muted and not (o.step_mute ~= 'no' and self.stepped)) then mp.command('no-osd set mute no') end
-        if (htp and self.paused) or (not htp and self.played) then mp.command('set pause yes') end
+        if (htp and self.paused) or (not htp and ((o.step_method == 'step' and not self.played) or self.played)) then mp.command('set pause yes') end
         if self.played then mp.commandv('seek', 0, 'relative+exact') end
         self.played = false
         if not osd.toggled then osd.show = false end
