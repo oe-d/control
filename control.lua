@@ -44,14 +44,13 @@ function init()
         elseif media.type == 'audio' then
             return o.music_symbol
         elseif media.type == 'video' then
-            local frame = get('frame')
-            local frames = get('frames')
-            if not frame or not frames then return o.video_symbol
+            local frame = get('estimated-frame-number')
+            if not frame or not media.frames then return o.video_symbol
             else frame = frame + 1 end
-            local progress = math.floor(frame / frames * 100)
-            return o.video_symbol..math.min(frame, frames)..' / '..frames..' ('..progress..'%)\n'
-                ..format(math.max(get('pos') or 0, 0))..'\n'
-                ..round(fps.fps, 3)..' fps ('..round(get('speed'), 2)..'x)'
+            local progress = math.floor(frame / media.frames * 100)
+            return o.video_symbol..math.min(frame, media.frames)..' / '..media.frames..' ('..progress..'%)\n'
+                ..format(media.playback.time)..'\n'
+                ..round(fps.fps, 3)..' fps ('..round(media.playback.speed, 2)..'x)'
         else
             return ''
         end
@@ -62,19 +61,24 @@ function init()
     step.delay_timer.timeout = o.step_delay / 1000
     step.hwdec_timer:kill()
     if o.audio_device > 0 then audio:set(o.audio_device) end
-    mp.register_event('file-loaded', function() media:get_type() end)
+    mp.register_event('file-loaded', function()
+        media:get_frames()
+        media:get_type()
+    end)
     mp.observe_property('window-minimized', 'bool', function(_, v) media.playback:on_minimize(v) end)
     mp.observe_property('pause', 'bool', function(_, v)
         osc:on_pause(v)
         step:on_pause(v)
     end)
-    mp.observe_property('playback-time', 'number', function(_, _)
+    mp.observe_property('playback-time', 'number', function(_, v)
+        media.playback.time = math.max(v or 0, 0)
         if osd.show then
-            fps:on_tick()
+            if media.type == 'video' then fps:on_tick() end
             osd:set(nil, o.info_duration / 1000)
         end
     end)
     mp.observe_property('play-dir', 'string', function(_, v) step:on_dir(v) end)
+    mp.observe_property('speed', 'number', function(_, v) media.playback.speed = v end)
     mp.observe_property('eof-reached', 'bool', function(_, v)
         media.playback:on_eof(v)
         fullscreen.on_eof(v)
@@ -113,28 +117,22 @@ function format(time)
 end
 
 function get(property)
-    local props = {
-        drops = 'frame-drop-count',
-        e_fps = 'estimated-vf-fps',
-        fps = 'container-fps',
-        frame = 'estimated-frame-number',
-        frames = 'estimated-frame-count',
-        pos = 'playback-time'
-    }
-    for k, v in pairs(props) do
-        if k == property then property = v end
-    end
     return mp.get_property_native(property)
 end
 
 media = {
+    frames = 0,
+    get_frames = function(self)
+        self.frames = get('estimated-frame-count')
+        return self.frames
+    end,
     type = nil,
     get_type = function(self)
         local tracks = get('track-list/count')
         for i = 0, tracks - 1 do
             if get('track-list/'..i..'/type') == 'video' then
                 if get('track-list/'..i..'/albumart') then self.type = 'audio'
-                elseif get('frames') < 2 then self.type = 'image'
+                elseif self.frames < 2 then self.type = 'image'
                 else self.type = 'video' end
                 return self.type
             end
@@ -143,6 +141,8 @@ media = {
         return self.type
     end,
     playback = {
+        time = 0,
+        speed = 0,
         eof = false,
         prev_pause = false,
         play = function(dir, speed)
@@ -321,22 +321,23 @@ fps = {
         if self.vop_dur ~= self.prev_vop_dur then self.frames = self.frames + 1 end
         self.prev_vop_dur = self.vop_dur
         self.vop_dur = 0
-        local fps = get('e_fps')
+        local fps = get('estimated-vf-fps')
         local t_delta = mp.get_time() - self.prev_time
         if not fps or t_delta < self.interval then return end
-        local spd = get('speed')
-        local pos_delta = math.abs((get('pos') or 0) - (self.prev_pos or 0))
-        local drops = (get('drops') or 0) - (self.prev_drops or 0)
+        local spd = media.playback.speed
+        local pos_delta = math.abs(media.playback.time - self.prev_pos)
+        local drops = get('frame-drop-count') or 0
+        local drop_delta = drops - self.prev_drops
         local mult = self.interval / t_delta
         local function hot_mess(speed)
-            if drops > 0 and self.frames * mult < fps * speed / math.max(fps / 30, 1) * self.interval * 0.95 then
+            if drop_delta > 0 and self.frames * mult < fps * speed / math.max(fps / 30, 1) * self.interval * 0.95 then
                 self.fps = round(self.frames * mult, 2)
             else
                 self.fps = fps * spd
             end
         end
         if spd > 1 then
-            if drops > 0 and (pos_delta * mult > 2 or pos_delta * mult / self.interval > spd * 0.95 and self.frames * mult > 18 * self.interval) then
+            if drop_delta > 0 and (pos_delta * mult > 2 or pos_delta * mult / self.interval > spd * 0.95 and self.frames * mult > 18 * self.interval) then
                 self.fps = round(fps * pos_delta * mult / self.interval, 2)
             else
                 hot_mess(1)
@@ -345,8 +346,8 @@ fps = {
             hot_mess(spd)
         end
         self.prev_time = mp.get_time()
-        self.prev_pos = get('pos')
-        self.prev_drops = get('drops')
+        self.prev_pos = media.playback.time
+        self.prev_drops = drops
         self.frames = 0
     end
 }
@@ -441,7 +442,7 @@ step = {
     played = false,
     delay_timer = mp.add_timeout(1e8, function() step:play() end),
     hwdec_timer = mp.add_periodic_timer(1 / 60, function()
-        if get('play-dir') == 'forward' and not get('pause') and get('frame') ~= step.dir_frame then
+        if get('play-dir') == 'forward' and not get('pause') and get('estimated-frame-number') ~= step.dir_frame then
             mp.command('no-osd set hwdec '..step.prev_hwdec)
             step.hwdec_timer:kill()
             step.prev_hwdec = nil
@@ -449,7 +450,7 @@ step = {
     end),
     on_dir = function(self, dir)
         if dir == 'forward' and self.prev_hwdec then
-            self.dir_frame = get('frame')
+            self.dir_frame = get('estimated-frame-number')
             self.hwdec_timer:resume()
         end
     end,
@@ -472,14 +473,14 @@ step = {
         self.prev_hwdec = self.prev_hwdec or get('hwdec')
         self.paused = get('pause')
         if not self.stepped then self.muted = get('mute') end
-        self.prev_speed = get('speed')
-        self.prev_pos = get('pos')
+        self.prev_speed = media.playback.speed
+        self.prev_pos = media.playback.time
         if o.show_info == 'yes' then osd.show = true end
         if htp then
             self.play_speed = o.htp_speed
             self:play()
         else
-            self.play_speed = o.step_rate == 0 and 1 or o.step_rate / get('fps')
+            self.play_speed = o.step_rate == 0 and 1 or o.step_rate / get('container-fps')
             self.delay_timer:resume()
             if not self.paused then mp.command('set pause yes') end
             if dir == 'forward' and o.step_method == 'step' then
@@ -487,13 +488,13 @@ step = {
                 mp.command('frame-step')
                 self.stepped = true
             elseif dir == 'backward' or get('time-pos') < get('duration') then
-                mp.commandv('seek', (dir == 'forward' and 1 or -1) / get('fps'), 'relative+exact')
+                mp.commandv('seek', (dir == 'forward' and 1 or -1) / get('container-fps'), 'relative+exact')
             end
         end
     end,
     stop = function(self, dir, htp)
         self.delay_timer:kill()
-        if dir == 'backward' and get('frame') > 0 and not self.played and get('pos') == self.prev_pos then
+        if dir == 'backward' and get('estimated-frame-number') > 0 and not self.played and media.playback.time == self.prev_pos then
             mp.command('frame-back-step')
             print('Backward seek failed. Reverted to backstep.')
         end
