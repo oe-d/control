@@ -57,6 +57,7 @@ function init()
     end
     osd.msg_timer:kill()
     osd.osd_timer:kill()
+    fps.get_est_fps:kill()
     step.delay_timer:kill()
     step.delay_timer.timeout = o.step_delay / 1000
     step.hwdec_timer:kill()
@@ -64,10 +65,12 @@ function init()
     mp.register_event('file-loaded', function()
         media:get_frames()
         media:get_type()
+        if media.type == 'video' then fps.get_est_fps:resume() end
     end)
     mp.observe_property('window-minimized', 'bool', function(_, v) media.playback:on_minimize(v) end)
     mp.observe_property('pause', 'bool', function(_, v)
         osc:on_pause(v)
+        if media.type == 'video' then fps:on_pause(v) end
         step:on_pause(v)
     end)
     mp.observe_property('playback-time', 'number', function(_, v)
@@ -306,6 +309,8 @@ osc = {
 
 fps = {
     interval = 0.5,
+    prev_est_fps = 0,
+    est_fps = 0,
     fps = 0,
     prev_time = 0,
     prev_pos = 0,
@@ -313,7 +318,20 @@ fps = {
     prev_vop_dur = 0,
     vop_dur = 0,
     frames = 0,
+    get_est_fps = mp.add_periodic_timer(1, function()
+        fps.prev_est_fps = fps.est_fps
+        fps.est_fps = round(get('estimated-vf-fps') or 0, 3)
+        if fps.est_fps == fps.prev_est_fps then fps.get_est_fps:kill() end
+    end),
+    on_pause = function(self, pause)
+        if pause then
+            if self.get_est_fps:is_enabled() then self.get_est_fps:stop() end
+        else
+            if self.est_fps == 0 or self.est_fps ~= self.prev_est_fps then self.get_est_fps:resume() end
+        end
+    end,
     on_tick = function(self)
+        local time = mp.get_time()
         local vop = get('vo-passes') or {fresh = {}}
         for _, v in ipairs(vop.fresh) do
             self.vop_dur = self.vop_dur + v.last
@@ -321,31 +339,30 @@ fps = {
         if self.vop_dur ~= self.prev_vop_dur then self.frames = self.frames + 1 end
         self.prev_vop_dur = self.vop_dur
         self.vop_dur = 0
-        local fps = get('estimated-vf-fps')
-        local t_delta = mp.get_time() - self.prev_time
-        if not fps or t_delta < self.interval then return end
+        local time_delta = time - self.prev_time
+        if time_delta < self.interval then return end
         local spd = media.playback.speed
         local pos_delta = math.abs(media.playback.time - self.prev_pos)
         local drops = get('frame-drop-count') or 0
         local drop_delta = drops - self.prev_drops
-        local mult = self.interval / t_delta
+        local mult = self.interval / time_delta
         local function hot_mess(speed)
-            if drop_delta > 0 and self.frames * mult < fps * speed / math.max(fps / 30, 1) * self.interval * 0.95 then
+            if drop_delta > 0 and self.frames * mult < self.est_fps * speed / math.max(self.est_fps / 30, 1) * self.interval * 0.95 then
                 self.fps = round(self.frames * mult, 2)
             else
-                self.fps = fps * spd
+                self.fps = self.est_fps * spd
             end
         end
         if spd > 1 then
             if drop_delta > 0 and (pos_delta * mult > 2 or pos_delta * mult / self.interval > spd * 0.95 and self.frames * mult > 18 * self.interval) then
-                self.fps = round(fps * pos_delta * mult / self.interval, 2)
+                self.fps = round(self.est_fps * pos_delta * mult / self.interval, 2)
             else
                 hot_mess(1)
             end
         else
             hot_mess(spd)
         end
-        self.prev_time = mp.get_time()
+        self.prev_time = time
         self.prev_pos = media.playback.time
         self.prev_drops = drops
         self.frames = 0
