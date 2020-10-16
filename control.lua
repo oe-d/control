@@ -57,7 +57,6 @@ function init()
     end
     osd.msg_timer:kill()
     osd.osd_timer:kill()
-    fps.get_est_fps:kill()
     step.delay_timer:kill()
     step.delay_timer.timeout = o.step_delay / 1000
     step.hwdec_timer:kill()
@@ -65,20 +64,17 @@ function init()
     mp.register_event('file-loaded', function()
         media:get_frames()
         media:get_type()
-        if media.type == 'video' then fps.get_est_fps:resume() end
+        if media.type == 'video' then fps:on_load() end
     end)
     mp.observe_property('window-minimized', 'bool', function(_, v) media.playback:on_minimize(v) end)
     mp.observe_property('pause', 'bool', function(_, v)
         osc:on_pause(v)
-        if media.type == 'video' then fps:on_pause(v) end
         step:on_pause(v)
     end)
     mp.observe_property('playback-time', 'number', function(_, v)
         media.playback.time = math.max(v or 0, 0)
-        if osd.show then
-            if media.type == 'video' then fps:on_tick() end
-            osd:set(nil, o.info_duration / 1000)
-        end
+        if media.type == 'video' then fps:on_tick() end
+        if osd.show then osd:set(nil, o.info_duration / 1000) end
     end)
     mp.observe_property('play-dir', 'string', function(_, v) step:on_dir(v) end)
     mp.observe_property('speed', 'number', function(_, v) media.playback.speed = v end)
@@ -311,6 +307,8 @@ fps = {
     interval = 0.5,
     prev_est_fps = 0,
     est_fps = 0,
+    identical_count = 0,
+    different_count = 0,
     fps = 0,
     prev_time = 0,
     prev_pos = 0,
@@ -318,19 +316,19 @@ fps = {
     prev_vop_dur = 0,
     vop_dur = 0,
     frames = 0,
-    get_est_fps = mp.add_periodic_timer(1, function()
-        fps.prev_est_fps = fps.est_fps
-        fps.est_fps = round(get('estimated-vf-fps') or 0, 3)
-        if fps.est_fps == fps.prev_est_fps then fps.get_est_fps:kill() end
-    end),
-    on_pause = function(self, pause)
-        if pause then
-            if self.get_est_fps:is_enabled() then self.get_est_fps:stop() end
+    get_est_fps = function(self)
+        self.est_fps = round(get('estimated-vf-fps') or 0, 3)
+        if self.est_fps == self.prev_est_fps then
+            self.identical_count = self.identical_count + 1
+            self.different_count = 0
         else
-            if self.est_fps == 0 or self.est_fps ~= self.prev_est_fps then self.get_est_fps:resume() end
+            self.identical_count = 0
         end
+        if self.identical_count == 0 then self.different_count = self.different_count + 1 end
+        if self.different_count == 30 then self.identical_count = 1000 end
+        self.prev_est_fps = self.est_fps
     end,
-    on_tick = function(self)
+    get_fps = function(self)
         local time = mp.get_time()
         local vop = get('vo-passes') or {fresh = {}}
         for _, v in ipairs(vop.fresh) do
@@ -366,6 +364,15 @@ fps = {
         self.prev_pos = media.playback.time
         self.prev_drops = drops
         self.frames = 0
+    end,
+    on_load = function(self)
+        self.prev_est_fps = 0
+        self.identical_count = 0
+        self.different_count = 0
+    end,
+    on_tick = function(self)
+        if self.identical_count < 60 then self:get_est_fps() end
+        if osd.show then self:get_fps() end
     end
 }
 
