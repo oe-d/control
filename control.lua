@@ -77,7 +77,10 @@ function init()
         if osd.show then osd:set(nil, o.info_duration / 1000) end
     end)
     mp.observe_property('play-dir', 'string', function(_, v) step:on_dir(v) end)
-    mp.observe_property('speed', 'number', function(_, v) media.playback.speed = v end)
+    mp.observe_property('speed', 'number', function(_, v)
+        media.playback.speed = v
+        if osd.show then osd:set(nil, o.info_duration / 1000) end
+    end)
     mp.observe_property('eof-reached', 'bool', function(_, v)
         media.playback:on_eof(v)
         fullscreen.on_eof(v)
@@ -95,11 +98,11 @@ function init()
 end
 
 function split(string, pattern)
-    local str = {}
+    local t = {}
     for i in string.gmatch(string, pattern) do
-        table.insert(str, i)
+        table.insert(t, i)
     end
-    return str
+    return t
 end
 
 function round(number, decimals)
