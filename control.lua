@@ -79,7 +79,7 @@ function init()
     mp.observe_property('play-dir', 'string', function(_, v) step:on_dir(v) end)
     mp.observe_property('speed', 'number', function(_, v)
         media.playback.speed = v
-        if osd.show then osd:set(nil, o.info_duration / 1000) end
+        if o.show_info then osd:set(nil, o.info_duration / 1000) end
     end)
     mp.observe_property('eof-reached', 'bool', function(_, v)
         media.playback:on_eof(v)
