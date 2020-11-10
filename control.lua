@@ -31,6 +31,7 @@ o = {
 
 function init()
     options.read_options(o, 'control')
+    if o.audio_device > 0 then audio:set(o.audio_device) end
     if o.step_delay == -1 then o.step_delay = get('input-ar-delay') end
     if o.step_rate == -1 then o.step_rate = get('input-ar-rate') end
     if o.end_rewind == 'file' then mp.set_property('keep-open', 'always') end
@@ -44,11 +45,8 @@ function init()
         elseif media.type == 'audio' then
             return o.music_symbol
         elseif media.type == 'video' then
-            local frame = get('estimated-frame-number')
-            if not frame or not media.frames then return o.video_symbol
-            else frame = frame + 1 end
-            local progress = math.floor(frame / media.frames * 100)
-            return o.video_symbol..math.min(frame, media.frames)..' / '..media.frames..' ('..progress..'%)\n'
+            return (not media.frames or media.playback.frame < 1) and o.video_symbol or
+                o.video_symbol..media.playback.frame..' / '..media.frames..' ('..media.playback.progress..'%)\n'
                 ..format(media.playback.time)..'\n'
                 ..round(fps.fps, 3)..' fps ('..round(media.playback.speed, 2)..'x)'
         else
@@ -60,10 +58,8 @@ function init()
     step.delay_timer:kill()
     step.delay_timer.timeout = o.step_delay / 1000
     step.hwdec_timer:kill()
-    if o.audio_device > 0 then audio:set(o.audio_device) end
     mp.register_event('file-loaded', function()
-        media:get_frames()
-        media:get_type()
+        media:on_load()
         if media.type == 'video' then fps:on_load() end
     end)
     mp.observe_property('window-minimized', 'bool', function(_, v) media.playback:on_minimize(v) end)
@@ -72,7 +68,7 @@ function init()
         step:on_pause(v)
     end)
     mp.observe_property('playback-time', 'number', function(_, v)
-        media.playback.time = math.max(v or 0, 0)
+        media.playback:on_tick(v)
         if media.type == 'video' then fps:on_tick() end
         if osd.show then osd:set(nil, o.info_duration / 1000) end
     end)
@@ -124,10 +120,7 @@ end
 
 media = {
     frames = 0,
-    get_frames = function(self)
-        self.frames = get('estimated-frame-count')
-        return self.frames
-    end,
+    duration = 0,
     type = nil,
     get_type = function(self)
         local tracks = get('track-list/count')
@@ -142,8 +135,15 @@ media = {
         if tracks > 0 then self.type = 'audio' end
         return self.type
     end,
+    on_load = function(self)
+        self.frames = get('estimated-frame-count')
+        self.duration = get('duration')
+        self:get_type()
+    end,
     playback = {
+        frame = 0,
         time = 0,
+        progress = 0,
         speed = 0,
         eof = false,
         prev_pause = false,
@@ -163,6 +163,11 @@ media = {
                 mp.commandv('seek', 0, 'absolute')
                 mp.command('set pause '..(pause and 'yes' or 'no'))
             end)
+        end,
+        on_tick = function(self, time)
+            self.time = math.max(time or 0, 0)
+            self.frame = math.min(round(media.frames * self.time / media.duration) + 1, media.frames)
+            self.progress = math.floor(self.frame / media.frames * 100)
         end,
         on_minimize = function(self, minimized)
             if o.pause_minimized == 'yes' or o.pause_minimized == media:get_type() then
