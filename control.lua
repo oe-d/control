@@ -166,8 +166,10 @@ media = {
         end,
         on_tick = function(self, time)
             self.time = math.max(time or 0, 0)
-            self.frame = math.min(round(media.frames * self.time / media.duration) + 1, media.frames)
-            self.progress = math.floor(self.frame / media.frames * 100)
+            if media.type == 'video' then
+                self.frame = math.min(round(media.frames * self.time / media.duration) + 1, media.frames)
+                self.progress = math.floor(self.frame / media.frames * 100)
+            end
         end,
         on_minimize = function(self, minimized)
             if o.pause_minimized == 'yes' or o.pause_minimized == media:get_type() then
