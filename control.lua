@@ -95,7 +95,7 @@ end
 
 function split(string, pattern)
     local t = {}
-    for i in string.gmatch(string, pattern) do
+    for i in string:gmatch(pattern) do
         table.insert(t, i)
     end
     return t
@@ -111,7 +111,7 @@ function format(time)
     local h = math.floor(time / 3600)
     local m = math.floor(time % 3600 / 60)
     local s = time % 60
-    return string.format('%02d:%02d:%06.03f', h, m, s)
+    return ('%02d:%02d:%06.03f'):format(h, m, s)
 end
 
 function get(property)
@@ -125,12 +125,12 @@ media = {
     get_type = function(self)
         local tracks = get('track-list/count')
         for i = 0, tracks - 1 do
-            if get('track-list/'..i..'/type') == 'video' then
-                if get('track-list/'..i..'/albumart') then self.type = 'audio'
-                elseif self.frames < 2 then self.type = 'image'
-                else self.type = 'video' end
-                return self.type
-            end
+            if get('track-list/'..i..'/type') ~= 'video' then goto next end
+            if get('track-list/'..i..'/albumart') then self.type = 'audio'
+            elseif self.frames < 2 then self.type = 'image'
+            else self.type = 'video' end
+            do return self.type end
+            ::next::
         end
         if tracks > 0 then self.type = 'audio' end
         return self.type
@@ -155,7 +155,7 @@ media = {
         end,
         pause = function(self)
             if self.eof then self.rewind()
-            else mp.command('set pause '..(get('pause') and 'no' or 'yes')) end
+            else mp.command('cycle pause') end
         end,
         rewind = function(playlist_pos, pause)
             if playlist_pos then mp.set_property('playlist-pos-1', math.min(playlist_pos, get('playlist-count'))) end
@@ -169,6 +169,7 @@ media = {
             if media.type == 'video' then
                 self.frame = math.min(round(media.frames * self.time / media.duration) + 1, media.frames)
                 self.progress = math.floor(self.frame / media.frames * 100)
+                self.eof = media.frames - self.frame <= 1
             end
         end,
         on_minimize = function(self, minimized)
@@ -183,7 +184,6 @@ media = {
             end
         end,
         on_eof = function(self, eof)
-            self.eof = eof
             if o.end_rewind ~= 'no' and eof and not step.played then self.rewind(tonumber(o.end_rewind), true) end
         end
     }
@@ -250,7 +250,7 @@ audio = {
         local vol = 0
         for i, v in ipairs(list) do
             local iv = split(v, '%d+')
-            if i == (self.i > 1 and self.i - 1 or table.getn(list)) and string.find(v, 'r') then
+            if i == (self.i > 1 and self.i - 1 or table.getn(list)) and v:find('r') then
                 self.set_prev_vol = true
                 remember_vol = true
             end
@@ -299,16 +299,15 @@ audio = {
 osc = {
     overlay = mp.create_osd_overlay('ass-events'),
     on_pause = function(self, pause)
-        if o.osc_paused then
-            if pause then
-                mp.command('script-message osc-visibility always no-osd')
-                mp.add_timeout(0.05, function()
-		            self.overlay:update()
-		            self.overlay:remove()
-	            end)
-            else
-                mp.command('script-message osc-visibility auto no-osd')
-            end
+        if not o.osc_paused then return end
+        if pause then
+            mp.command('script-message osc-visibility always no-osd')
+            mp.add_timeout(0.05, function()
+		        self.overlay:update()
+		        self.overlay:remove()
+	        end)
+        else
+            mp.command('script-message osc-visibility auto no-osd')
         end
     end
 }
@@ -490,7 +489,9 @@ step = {
     end,
     on_pause = function(self, pause)
         if not pause and self.stepped then
-            if (o.step_mute == 'auto' and not self.muted) or (o.step_mute == 'hold' and not self.muted and not self.played) then mp.command('no-osd set mute no') end
+            if (o.step_mute == 'auto' and not self.muted) or (o.step_mute == 'hold' and not self.muted and not self.played) then
+                mp.command('no-osd set mute no')
+            end
             mp.commandv('seek', 0, 'relative+exact')
             self.stepped = false
         end
@@ -534,8 +535,12 @@ step = {
         end
         if not htp or not o.htp_keep_dir then mp.command('no-osd set play-dir forward') end
         mp.command('no-osd set speed '..self.prev_speed)
-        if o.step_mute ~= 'no' and (not self.muted and not (o.step_mute ~= 'no' and self.stepped)) then mp.command('no-osd set mute no') end
-        if (htp and self.paused) or (not htp and ((o.step_method == 'step' and not self.played) or self.played)) then mp.command('set pause yes') end
+        if o.step_mute ~= 'no' and (not self.muted and not (o.step_mute ~= 'no' and self.stepped)) then
+            mp.command('no-osd set mute no')
+        end
+        if (htp and self.paused) or (not htp and ((o.step_method == 'step' and not self.played) or self.played)) then
+            mp.command('set pause yes')
+        end
         if self.played then mp.commandv('seek', 0, 'relative+exact') end
         self.played = false
         if not osd.toggled then osd.show = false end
