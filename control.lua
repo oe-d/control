@@ -6,7 +6,7 @@ options = require 'mp.options'
 u = require 'mp.utils'
 
 o = {
-    audio_devices = '\'auto\'',
+    audio_devices = "'auto'",
     audio_device = 0,
     osc_paused = false,
     pause_minimized = 'no',
@@ -150,8 +150,11 @@ media = {
         play = function(dir, speed)
             mp.command('no-osd set play-dir '..dir)
             mp.command('no-osd set speed '..speed)
-            mp.commandv('seek', 0, 'relative+exact')
+            if not step.played_backward or (step.played_backward and (not step.prev_hwdec or step.prev_hwdec == 'no')) then
+                mp.commandv('seek', 0, 'relative+exact')
+            end
             mp.command('set pause no')
+            step.played_backward = dir == 'backward'
         end,
         pause = function(self)
             if self.eof then self.rewind()
@@ -198,7 +201,7 @@ audio = {
     prev_vol = 0,
     valid = true,
     get_list = function(self)
-        local names = split(o.audio_devices, '\'([^\']+)\'')
+        local names = split(o.audio_devices, "'([^']+)'")
         local user_list = {}
         local list = self:get()
         for i, v in ipairs(names) do
@@ -236,7 +239,7 @@ audio = {
                 if o.show_volume then vol = '('..get('volume')..') ' end
             end
             msg = msg..symbol..vol..v.description..'\n'
-            if do_print then print('\''..v.name..'\''..' ('..v.description..')') end
+            if do_print then print("'"..v.name.."'"..' ('..v.description..')') end
         end
         if self.osd then osd:set(msg, duration) end
     end,
@@ -473,6 +476,7 @@ step = {
     play_speed = 1,
     stepped = false,
     played = false,
+    played_backward = false,
     delay_timer = mp.add_timeout(1e8, function() step:play() end),
     hwdec_timer = mp.add_periodic_timer(1 / 60, function()
         if get('play-dir') == 'forward' and not get('pause') and get('estimated-frame-number') ~= step.dir_frame then
