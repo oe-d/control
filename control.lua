@@ -187,6 +187,7 @@ media = {
             end
         end,
         on_eof = function(self, eof)
+            if media.type == 'audio' then self.eof = eof end
             if o.end_rewind ~= 'no' and eof and not step.played then self.rewind(tonumber(o.end_rewind), true) end
         end
     }
