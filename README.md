@@ -2,6 +2,7 @@
 
 Features:
 - Always visible OSC when paused.
+- Force play/pause on file load.
 - Pause on minimize.
 - Improved cycle fullscreen when using mouse.
 - Cycle pause with video replay at the end of playback.
