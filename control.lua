@@ -329,6 +329,7 @@ fps = {
     prev_vop_dur = 0,
     vop_dur = 0,
     frames = 0,
+    drop_d = 0,
     get_est_fps = function(self)
         self.est_fps = round(get('estimated-vf-fps') or 0, 3)
         if self.est_fps == self.prev_est_fps then
@@ -343,30 +344,28 @@ fps = {
     end,
     get_fps = function(self)
         local time = mp.get_time()
-        local vop = get('vo-passes') or {fresh = {}}
-        for _, v in ipairs(vop.fresh) do
-            self.vop_dur = self.vop_dur + v.last
-        end
+        local vop = self.drop_d > 0 and get('vo-passes') or {fresh = {}}
+        for _, v in ipairs(vop.fresh) do self.vop_dur = self.vop_dur + v.last end
         if self.vop_dur ~= self.prev_vop_dur then self.frames = self.frames + 1 end
         self.prev_vop_dur = self.vop_dur
         self.vop_dur = 0
-        local time_delta = time - self.prev_time
-        if time_delta < self.interval then return end
+        local time_d = time - self.prev_time
+        if time_d < self.interval then return end
         local spd = media.playback.speed
-        local pos_delta = math.abs(media.playback.time - self.prev_pos)
+        local pos_d = math.abs(media.playback.time - self.prev_pos)
         local drops = get('frame-drop-count') or 0
-        local drop_delta = drops - self.prev_drops
-        local mult = self.interval / time_delta
+        self.drop_d = drops - self.prev_drops
+        local mult = self.interval / time_d
         local function hot_mess(speed)
-            if drop_delta > 0 and self.frames * mult < self.est_fps * speed / math.max(self.est_fps / 30, 1) * self.interval * 0.95 then
+            if self.drop_d > 0 and self.frames * mult < self.est_fps * speed / math.max(self.est_fps / 30, 1) * self.interval * 0.95 then
                 self.fps = round(self.frames * mult, 2)
             else
                 self.fps = self.est_fps * spd
             end
         end
         if spd > 1 then
-            if drop_delta > 0 and (pos_delta * mult > 2 or pos_delta * mult / self.interval > spd * 0.95 and self.frames * mult > 18 * self.interval) then
-                self.fps = round(self.est_fps * pos_delta * mult / self.interval, 2)
+            if self.drop_d > 0 and (pos_d * mult > 2 or pos_d * mult / self.interval > spd * 0.95 and self.frames * mult > 18 * self.interval) then
+                self.fps = round(self.est_fps * pos_d * mult / self.interval, 2)
             else
                 hot_mess(1)
             end
