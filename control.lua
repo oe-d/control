@@ -9,6 +9,7 @@ o = {
     audio_devices = "'auto'",
     audio_device = 0,
     osc_paused = false,
+    play_on_load = 'auto',
     pause_minimized = 'no',
     play_restored = false,
     show_info = 'yes',
@@ -62,6 +63,7 @@ function init()
     step.hwdec_timer:kill()
     mp.register_event('file-loaded', function()
         media:on_load()
+        media.playback.on_load()
         if media.type == 'video' then fps:on_load() end
     end)
     mp.observe_property('window-minimized', 'bool', function(_, v) media.playback:on_minimize(v) end)
@@ -170,6 +172,9 @@ media = {
                 mp.commandv('seek', 0, 'absolute')
                 mp.command('set pause '..(pause and 'yes' or 'no'))
             end)
+        end,
+        on_load = function()
+            if o.play_on_load ~= 'auto' then mp.command('set pause '..(o.play_on_load == 'yes' and 'no' or 'yes')) end
         end,
         on_tick = function(self, time)
             self.time = math.max(time or 0, 0)
