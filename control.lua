@@ -335,8 +335,8 @@ fps = {
     frames = 0,
     drop_d = 0,
     get_est_fps_timer = mp.add_periodic_timer(1e8, function()
-        fps.est_fps = round(get('estimated-vf-fps') or 0, 3)
         if not media.playback.paused then
+            fps.est_fps = round(get('estimated-vf-fps') or 0, 3)
             if fps.est_fps == fps.prev_est_fps then fps.get_est_fps_timer:kill() end
             fps.prev_est_fps = fps.est_fps
         end
