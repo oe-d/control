@@ -53,6 +53,8 @@ function init()
             return ''
         end
     end
+    fps.get_est_fps_timer:kill()
+    fps.get_est_fps_timer.timeout = fps.interval
     osd.msg_timer:kill()
     osd.osd_timer:kill()
     step.delay_timer:kill()
@@ -64,6 +66,7 @@ function init()
     end)
     mp.observe_property('window-minimized', 'bool', function(_, v) media.playback:on_minimize(v) end)
     mp.observe_property('pause', 'bool', function(_, v)
+        media.playback.paused = v
         osc:on_pause(v)
         step:on_pause(v)
     end)
@@ -145,6 +148,7 @@ media = {
         time = 0,
         progress = 0,
         speed = 0,
+        paused = false,
         eof = false,
         prev_pause = false,
         play = function(dir, speed)
@@ -178,7 +182,7 @@ media = {
         on_minimize = function(self, minimized)
             if o.pause_minimized == 'yes' or o.pause_minimized == media:get_type() then
                 if minimized then
-                    self.prev_pause = get('pause')
+                    self.prev_pause = media.playback.paused
                     mp.command('set pause yes')
                 elseif o.play_restored then
                     if not self.prev_pause then mp.command('set pause no') end
@@ -330,6 +334,13 @@ fps = {
     vop_dur = 0,
     frames = 0,
     drop_d = 0,
+    get_est_fps_timer = mp.add_periodic_timer(1e8, function()
+        fps.est_fps = round(get('estimated-vf-fps') or 0, 3)
+        if not media.playback.paused then
+            if fps.est_fps == fps.prev_est_fps then fps.get_est_fps_timer:kill() end
+            fps.prev_est_fps = fps.est_fps
+        end
+    end),
     get_est_fps = function(self)
         self.est_fps = round(get('estimated-vf-fps') or 0, 3)
         if self.est_fps == self.prev_est_fps then
@@ -339,7 +350,11 @@ fps = {
             self.identical_count = 0
         end
         if self.identical_count == 0 then self.different_count = self.different_count + 1 end
-        if self.different_count == 30 then self.identical_count = 1000 end
+        if self.different_count == 30 then
+            self.prev_est_fps = 0
+            self.identical_count = 1000
+            self.get_est_fps_timer:resume()
+        end
         self.prev_est_fps = self.est_fps
     end,
     get_fps = function(self)
@@ -378,6 +393,7 @@ fps = {
         self.frames = 0
     end,
     on_load = function(self)
+        self.get_est_fps_timer:kill()
         self.prev_est_fps = 0
         self.identical_count = 0
         self.different_count = 0
@@ -479,7 +495,7 @@ step = {
     played_backward = false,
     delay_timer = mp.add_timeout(1e8, function() step:play() end),
     hwdec_timer = mp.add_periodic_timer(1 / 60, function()
-        if get('play-dir') == 'forward' and not get('pause') and get('estimated-frame-number') ~= step.dir_frame then
+        if get('play-dir') == 'forward' and not media.playback.paused and get('estimated-frame-number') ~= step.dir_frame then
             mp.command('no-osd set hwdec '..step.prev_hwdec)
             step.hwdec_timer:kill()
             step.prev_hwdec = nil
@@ -510,7 +526,7 @@ step = {
     start = function(self, dir, htp)
         self.direction = dir
         self.prev_hwdec = self.prev_hwdec or get('hwdec')
-        self.paused = get('pause')
+        self.paused = media.playback.paused
         if not self.stepped then self.muted = get('mute') end
         self.prev_speed = media.playback.speed
         self.prev_pos = media.playback.time
