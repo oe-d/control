@@ -153,6 +153,7 @@ media = {
         paused = false,
         eof = false,
         prev_pause = false,
+        prev_sync = nil,
         play = function(dir, speed)
             mp.command('no-osd set play-dir '..dir)
             mp.command('no-osd set speed '..speed)
@@ -193,6 +194,17 @@ media = {
                     if not self.prev_pause then mp.command('set pause no') end
                     self.prev_pause = false
                 end
+            elseif not get('angle-flip') then
+                if minimized then
+                    local sync = get('video-sync')
+                    if sync ~= 'audio' then
+                        self.prev_sync = sync
+                        mp.command('set video-sync audio')
+                    end
+                else
+                    if self.prev_sync then mp.command('set video-sync '..self.prev_sync) end
+                    self.prev_sync = nil
+                end
             end
         end,
         on_eof = function(self, eof)
@@ -227,7 +239,7 @@ audio = {
     end,
     get = function(self, index)
         local list = index and self:get_list() or get('audio-device-list')
-        if (index and (index < 1 or index > table.getn(list) or not list[index].description)) then
+        if (index and (index < 1 or index > #list or not list[index].description)) then
             self.valid = false
             list[1].name = 'Invalid device index ('..index..')'
             list[1].description = list[1].name
@@ -256,14 +268,14 @@ audio = {
     cycle = function(self, list)
         if u.to_string(list) ~= self.prev_list then self.i = 0 end
         self.prev_list = u.to_string(list)
-        self.i = self.i == table.getn(list) and 1 or self.i + 1
+        self.i = self.i == #list and 1 or self.i + 1
         local remember_vol = false
         local index = 0
         local set_vol = false
         local vol = 0
         for i, v in ipairs(list) do
             local iv = split(v, '%d+')
-            if i == (self.i > 1 and self.i - 1 or table.getn(list)) and v:find('r') then
+            if i == (self.i > 1 and self.i - 1 or #list) and v:find('r') then
                 self.set_prev_vol = true
                 remember_vol = true
             end
