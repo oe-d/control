@@ -132,7 +132,7 @@ media = {
         for i = 0, tracks - 1 do
             if get('track-list/'..i..'/type') ~= 'video' then goto next end
             if get('track-list/'..i..'/albumart') then self.type = 'audio'
-            elseif self.frames < 2 then self.type = 'image'
+            elseif not self.duration or self.duration == 0 then self.type = 'image'
             else self.type = 'video' end
             do return self.type end
             ::next::
@@ -549,7 +549,7 @@ step = {
             self.play_speed = o.htp_speed
             self:play()
         else
-            self.play_speed = o.step_rate == 0 and 1 or o.step_rate / get('container-fps')
+            self.play_speed = o.step_rate == 0 and 1 or o.step_rate / fps.est_fps
             self.delay_timer:resume()
             if not self.paused then mp.command('set pause yes') end
             if dir == 'forward' and o.step_method == 'step' then
@@ -557,7 +557,7 @@ step = {
                 mp.command('frame-step')
                 self.stepped = true
             elseif dir == 'backward' or get('time-pos') < get('duration') then
-                mp.commandv('seek', (dir == 'forward' and 1 or -1) / get('container-fps'), 'relative+exact')
+                mp.commandv('seek', (dir == 'forward' and 1 or -1) / fps.est_fps, 'relative+exact')
             end
         end
     end,
