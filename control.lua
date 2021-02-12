@@ -199,10 +199,10 @@ media = {
                     local sync = get('video-sync')
                     if sync ~= 'audio' then
                         self.prev_sync = sync
-                        mp.command('set video-sync audio')
+                        mp.command('no-osd set video-sync audio')
                     end
                 else
-                    if self.prev_sync then mp.command('set video-sync '..self.prev_sync) end
+                    if self.prev_sync then mp.command('no-osd set video-sync '..self.prev_sync) end
                     self.prev_sync = nil
                 end
             end
