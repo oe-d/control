@@ -194,7 +194,7 @@ media = {
                     if not self.prev_pause then mp.command('set pause no') end
                     self.prev_pause = false
                 end
-            elseif not get('angle-flip') then
+            elseif not get('d3d11-flip') or not get('angle-flip') then
                 if minimized then
                     local sync = get('video-sync')
                     if sync ~= 'audio' then
@@ -568,7 +568,8 @@ step = {
             print('Backward seek failed. Reverted to backstep.')
         end
         if not htp or not o.htp_keep_dir then mp.command('no-osd set play-dir forward') end
-        mp.command('no-osd set speed '..self.prev_speed)
+        media.playback.speed = self.prev_speed
+        mp.command('no-osd set speed '..media.playback.speed)
         if o.step_mute ~= 'no' and (not self.muted and not (o.step_mute ~= 'no' and self.stepped)) then
             mp.command('no-osd set mute no')
         end
