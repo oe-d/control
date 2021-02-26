@@ -80,7 +80,8 @@ function init()
     mp.observe_property('play-dir', 'string', function(_, v) step:on_dir(v) end)
     mp.observe_property('speed', 'number', function(_, v)
         media.playback.speed = v
-        if o.show_info then osd:set(nil, o.info_duration / 1000) end
+        if media.type == 'video' then fps:on_speed() end
+        if o.show_info == 'yes' then osd:set(nil, o.info_duration / 1000) end
     end)
     mp.observe_property('eof-reached', 'bool', function(_, v)
         media.playback:on_eof(v)
@@ -415,6 +416,9 @@ fps = {
     on_tick = function(self)
         if self.identical_count < 60 then self:get_est_fps() end
         if osd.show then self:get_fps() end
+    end,
+    on_speed = function(self)
+        self.fps = self.est_fps * media.playback.speed
     end
 }
 
