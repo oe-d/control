@@ -45,17 +45,15 @@ Cycle fullscreen and prevent draggable fullscreen window.
 Cycle pause and replay video at the end of playback.
 
 #### `list-audio-devices`
-Shows a list of audio devices. Prints device names and description to console.
+Shows a list of audio devices.
 
 #### `cycle-audio-devices`
 Cycle a list of audio devices separated by space. Devices first need to be added to `control.conf`.
 
-Usage: `no-osd` (optional) `iv#r` where `i` = index, `v#` = volume (optional), `r` = remember volume (optional).
-
-`r` will remember current volume and change back to it when cycling to a device without the `v` option.
+Usage: `no-osd` (optional) `iv#` where `i` = index, `v#` = volume (optional).
 
 #### `set-audio-device`
-Same usage as `cycle-audio-devices` except `r` which is ignored.
+Same usage as `cycle-audio-devices`.
 
 #### `toggle-info`
 Toggle playback info. Shows frame count, progress, fps and speed.
