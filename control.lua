@@ -32,7 +32,8 @@ o = {
 
 function init()
     options.read_options(o, 'control')
-    if o.audio_device > 0 then audio:set(o.audio_device) end
+    audio:create_user_list()
+    if o.audio_device > 0 then audio:set(o.audio_device, get('volume')) end
     if o.step_delay == -1 then o.step_delay = get('input-ar-delay') end
     if o.step_rate == -1 then o.step_rate = get('input-ar-rate') end
     if o.end_rewind == 'file' then mp.set_property('keep-open', 'always') end
@@ -97,6 +98,13 @@ function init()
     mp.add_key_binding(nil, 'step-back', function(e) step:key_handler(e, 'backward') end, {complex = true})
     mp.add_key_binding(nil, 'htp', function(e) step:key_handler(e, 'forward', true) end, {complex = true})
     mp.add_key_binding(nil, 'htp-back', function(e) step:key_handler(e, 'backward', true) end, {complex = true})
+end
+
+function case_insensitive(str)
+    str = str:gsub('%a', function(char)
+        return ('[%s%s]'):format(char:lower(), char:upper())
+    end)
+    return str
 end
 
 function split(string, pattern)
@@ -217,29 +225,26 @@ media = {
 
 audio = {
     osd = true,
+    user_list = {},
     prev_list = '',
     i = 0,
-    set_prev_vol = false,
-    prev_mute = false,
-    prev_vol = 0,
     valid = true,
-    get_list = function(self)
-        local names = split(o.audio_devices, "'([^']+)'")
-        local user_list = {}
+    create_user_list = function(self)
+        local user_list = split(o.audio_devices, '"([^"]+)"')
+        if #user_list == 0 then user_list = split(o.audio_devices, "'([^']+)'") end
         local list = self:get()
-        for i, v in ipairs(names) do
-            table.insert(user_list, {name = v})
+        for i, v in ipairs(user_list) do
+            table.insert(self.user_list, {})
             for j, _ in ipairs(list) do
-                if v == list[j].name then
-                    user_list[i].description = list[j].description
+                if list[j].description:find(case_insensitive(v)) then
+                    self.user_list[i] = list[j]
                     break
                 end
             end
         end
-        return user_list
     end,
     get = function(self, index)
-        local list = index and self:get_list() or get('audio-device-list')
+        local list = index and self.user_list or get('audio-device-list')
         if (index and (index < 1 or index > #list or not list[index].description)) then
             self.valid = false
             list[1].name = 'Invalid device index ('..index..')'
@@ -248,11 +253,16 @@ audio = {
         end
         return index and list[index] or list
     end,
-    set = function(self, index)
+    set = function(self, index, vol)
+        self.valid = true
         local name = self:get(index).name
-        if self.valid then mp.command('no-osd set audio-device '..name) end
+        if self.valid then
+            mp.command('no-osd set audio-device '..name)
+            mp.command('no-osd set volume '..vol)
+        end
     end,
-    list = function(self, list, duration, do_print)
+    list = function(self, list, duration)
+        if not self.osd then return end
         local msg = ''
         for i, v in ipairs(list) do
             local symbol = ''
@@ -262,53 +272,32 @@ audio = {
                 if o.show_volume then vol = '('..get('volume')..') ' end
             end
             msg = msg..symbol..vol..v.description..'\n'
-            if do_print then print("'"..v.name.."'"..' ('..v.description..')') end
         end
-        if self.osd then osd:set(msg, duration) end
+        osd:set(msg, duration)
     end,
     cycle = function(self, list)
-        if u.to_string(list) ~= self.prev_list then self.i = 0 end
+        for _, v in ipairs(self.user_list) do
+            if v.name == get('audio-device') then v.volume = get('volume') end
+        end
+        self.i = u.to_string(list) ~= self.prev_list and 1 or (self.i == #list and 1 or self.i + 1)
         self.prev_list = u.to_string(list)
-        self.i = self.i == #list and 1 or self.i + 1
-        local remember_vol = false
         local index = 0
-        local set_vol = false
         local vol = 0
         for i, v in ipairs(list) do
-            local iv = split(v, '%d+')
-            if i == (self.i > 1 and self.i - 1 or #list) and v:find('r') then
-                self.set_prev_vol = true
-                remember_vol = true
-            end
+            local components = split(v, '%d+')
             if i == self.i then
-                index = tonumber(iv[1])
-                if iv[2] then
-                    set_vol = true
-                    vol = iv[2]
-                end
+                index = tonumber(components[1])
+                vol = tonumber(components[2]) or self.user_list[index].volume or get('volume')
             end
-            list[i] = self:get(tonumber(iv[1]))
+            list[i] = self:get(tonumber(components[1]))
         end
-        if remember_vol then
-            self.prev_mute = get('mute')
-            self.prev_vol = get('volume')
-        end
-        self.valid = true
-        self:set(index)
-        if self.valid and set_vol then
-            mp.command('no-osd set mute no')
-            mp.command('no-osd set volume '..vol)
-        elseif self.valid and self.set_prev_vol then
-            mp.command('no-osd set mute '..(self.prev_mute and 'yes' or 'no'))
-            mp.command('no-osd set volume '..self.prev_vol)
-            self.set_prev_vol = false
-        end
+        self:set(index, vol)
         self:list(list, 2)
     end,
     msg_handler = function(self, cmd, ...)
         if cmd == 'list' then
             self.osd = true
-            self:list(self:get(), 4, true)
+            self:list(self:get(), 4)
         elseif cmd == 'cycle' then
             local args = {...}
             if args[1] == 'no-osd' then
