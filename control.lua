@@ -217,7 +217,7 @@ media = {
             end
         end,
         on_eof = function(self, eof)
-            if media.type == 'audio' then self.eof = eof end
+            self.eof = eof
             if o.end_rewind ~= 'no' and eof and not step.played then self.rewind(tonumber(o.end_rewind), true) end
         end
     }
@@ -569,7 +569,7 @@ step = {
         if (htp and self.paused) or (not htp and ((o.step_method == 'step' and not self.played) or self.played)) then
             mp.command('set pause yes')
         end
-        if self.played then mp.commandv('seek', 0, 'relative+exact') end
+        if self.played and not media.playback.eof then mp.commandv('seek', 0, 'relative+exact') end
         self.played = false
         if not osd.toggled then osd.show = false end
     end,
